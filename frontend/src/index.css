@@ -1,0 +1,260 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles */
+@layer base {
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-200 hover:bg-gray-300 text-gray-900 font-medium py-2 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2;
+  }
+  
+  .btn-danger {
+    @apply bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2;
+  }
+  
+  .input-field {
+    @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500;
+  }
+  
+  .card {
+    @apply bg-white rounded-lg shadow-sm border border-gray-200;
+  }
+  
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  
+  .badge-primary {
+    @apply bg-primary-100 text-primary-800;
+  }
+  
+  .badge-secondary {
+    @apply bg-gray-100 text-gray-800;
+  }
+  
+  .badge-success {
+    @apply bg-green-100 text-green-800;
+  }
+  
+  .badge-warning {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+  
+  .badge-danger {
+    @apply bg-red-100 text-red-800;
+  }
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Email content styling */
+.email-content {
+  @apply max-w-none;
+}
+
+.email-content h1,
+.email-content h2,
+.email-content h3,
+.email-content h4,
+.email-content h5,
+.email-content h6 {
+  @apply text-gray-900 font-semibold mb-4 mt-6;
+}
+
+.email-content h1 { @apply text-2xl; }
+.email-content h2 { @apply text-xl; }
+.email-content h3 { @apply text-lg; }
+.email-content h4 { @apply text-base; }
+
+.email-content p {
+  @apply text-gray-700 leading-relaxed mb-4;
+}
+
+.email-content a {
+  @apply text-primary-600 hover:text-primary-500 underline;
+}
+
+.email-content blockquote {
+  @apply border-l-4 border-gray-300 pl-4 italic text-gray-600 my-4;
+}
+
+.email-content pre {
+  @apply bg-gray-100 rounded-md p-3 overflow-x-auto my-4;
+}
+
+.email-content code {
+  @apply bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-sm;
+}
+
+.email-content ul {
+  @apply list-disc list-inside mb-4;
+}
+
+.email-content ol {
+  @apply list-decimal list-inside mb-4;
+}
+
+.email-content li {
+  @apply mb-1;
+}
+
+.email-content img {
+  @apply max-w-full h-auto rounded-md;
+}
+
+.email-content table {
+  @apply w-full border-collapse border border-gray-300 my-4;
+}
+
+.email-content th,
+.email-content td {
+  @apply border border-gray-300 px-3 py-2 text-left;
+}
+
+.email-content th {
+  @apply bg-gray-50 font-semibold;
+}
+
+/* Animation classes */
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+.slide-down {
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    transform: translateY(10px); 
+    opacity: 0; 
+  }
+  to { 
+    transform: translateY(0); 
+    opacity: 1; 
+  }
+}
+
+@keyframes slideDown {
+  from { 
+    transform: translateY(-10px); 
+    opacity: 0; 
+  }
+  to { 
+    transform: translateY(0); 
+    opacity: 1; 
+  }
+}
+
+/* Loading states */
+.skeleton {
+  @apply bg-gray-200 animate-pulse;
+}
+
+.skeleton-text {
+  @apply h-4 bg-gray-200 rounded animate-pulse;
+}
+
+.skeleton-circle {
+  @apply w-10 h-10 bg-gray-200 rounded-full animate-pulse;
+}
+
+/* Focus states for accessibility */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+}
+
+/* Email list specific styles */
+.email-list-item {
+  @apply hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0;
+}
+
+.email-list-item.unread {
+  @apply bg-blue-50 border-blue-100;
+}
+
+.email-list-item.selected {
+  @apply bg-primary-50 border-primary-200;
+}
+
+/* Campaign builder styles */
+.campaign-editor {
+  @apply min-h-96 border border-gray-300 rounded-md;
+}
+
+.campaign-editor .ql-toolbar {
+  @apply border-t-0 border-l-0 border-r-0 border-b border-gray-300;
+}
+
+.campaign-editor .ql-container {
+  @apply border-0;
+}
+
+/* Automation rule builder */
+.automation-condition {
+  @apply bg-gray-50 border border-gray-200 rounded-md p-4 space-y-3;
+}
+
+.automation-action {
+  @apply bg-blue-50 border border-blue-200 rounded-md p-4 space-y-3;
+}
+
+/* Responsive design helpers */
+@media (max-width: 640px) {
+  .mobile-hidden {
+    @apply hidden;
+  }
+}
+
+@media (min-width: 641px) {
+  .mobile-only {
+    @apply hidden;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-break {
+    page-break-before: always;
+  }
+}
