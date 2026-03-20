@@ -408,6 +408,10 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
+## Partners
+
+
+
 **Built with ❤️ for the Pulsemail community**
 
 This custom client enhances your Pulsemail experience with modern features while maintaining compatibility with your existing setup. Perfect for organizations looking to upgrade their email interface without changing their underlying infrastructure.
