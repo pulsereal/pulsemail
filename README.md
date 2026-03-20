@@ -409,7 +409,11 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ---
 
 ## Partners
-
+- [Flogpt](https://flogpt.com)
+- [OutreachBox](https://outreachbox.com)
+- [VistaDigit](https://vistadigit.com)
+- [InclusiveSpeak](https://inclusivespeak.com)
+- [PulseReal](https://pulsereal.com)
 
 
 **Built with ❤️ for the Pulsemail community**
