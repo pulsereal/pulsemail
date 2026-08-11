@@ -408,6 +408,14 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
+## Partners
+- [Flogpt](https://flogpt.com)
+- [OutreachBox](https://outreachbox.com)
+- [VistaDigit](https://vistadigit.com)
+- [InclusiveSpeak](https://inclusivespeak.com)
+- [PulseReal](https://pulsereal.com)
+
+
 **Built with ❤️ for the Pulsemail community**
 
 This custom client enhances your Pulsemail experience with modern features while maintaining compatibility with your existing setup. Perfect for organizations looking to upgrade their email interface without changing their underlying infrastructure.
