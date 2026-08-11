@@ -1,0 +1,277 @@
+[
+  {
+    "user_email": "test@localhost",
+    "name": "INBOX",
+    "path": "INBOX",
+    "delimiter": "/",
+    "attributes": [
+      "\\HasNoChildren"
+    ],
+    "count": 12,
+    "unseen": 4
+  },
+  {
+    "user_email": "test@localhost",
+    "name": "Sent",
+    "path": "Sent",
+    "delimiter": "/",
+    "attributes": [
+      "\\HasNoChildren"
+    ],
+    "count": 0,
+    "unseen": 0
+  },
+  {
+    "user_email": "test@localhost",
+    "name": "Drafts",
+    "path": "Drafts",
+    "delimiter": "/",
+    "attributes": [
+      "\\HasNoChildren"
+    ],
+    "count": 0,
+    "unseen": 0
+  },
+  {
+    "user_email": "test@localhost",
+    "name": "Trash",
+    "path": "Trash",
+    "delimiter": "/",
+    "attributes": [
+      "\\HasNoChildren"
+    ],
+    "count": 0,
+    "unseen": 0
+  },
+  {
+    "user_email": "admin@localhost",
+    "name": "INBOX",
+    "path": "INBOX",
+    "delimiter": "/",
+    "attributes": [
+      "\\HasNoChildren"
+    ],
+    "count": 5,
+    "unseen": 3
+  },
+  {
+    "user_email": "admin@localhost",
+    "name": "Sent",
+    "path": "Sent",
+    "delimiter": "/",
+    "attributes": [
+      "\\HasNoChildren"
+    ],
+    "count": 0,
+    "unseen": 0
+  },
+  {
+    "user_email": "admin@localhost",
+    "name": "Drafts",
+    "path": "Drafts",
+    "delimiter": "/",
+    "attributes": [
+      "\\HasNoChildren"
+    ],
+    "count": 0,
+    "unseen": 0
+  },
+  {
+    "user_email": "admin@localhost",
+    "name": "Trash",
+    "path": "Trash",
+    "delimiter": "/",
+    "attributes": [
+      "\\HasNoChildren"
+    ],
+    "count": 0,
+    "unseen": 0
+  },
+  {
+    "user_email": "sarah@localhost",
+    "name": "INBOX",
+    "path": "INBOX",
+    "delimiter": "/",
+    "attributes": [
+      "\\HasNoChildren"
+    ],
+    "count": 3,
+    "unseen": 2
+  },
+  {
+    "user_email": "sarah@localhost",
+    "name": "Sent",
+    "path": "Sent",
+    "delimiter": "/",
+    "attributes": [
+      "\\HasNoChildren"
+    ],
+    "count": 0,
+    "unseen": 0
+  },
+  {
+    "user_email": "sarah@localhost",
+    "name": "Drafts",
+    "path": "Drafts",
+    "delimiter": "/",
+    "attributes": [
+      "\\HasNoChildren"
+    ],
+    "count": 0,
+    "unseen": 0
+  },
+  {
+    "user_email": "sarah@localhost",
+    "name": "Trash",
+    "path": "Trash",
+    "delimiter": "/",
+    "attributes": [
+      "\\HasNoChildren"
+    ],
+    "count": 0,
+    "unseen": 0
+  },
+  {
+    "user_email": "support@localhost",
+    "name": "INBOX",
+    "path": "INBOX",
+    "delimiter": "/",
+    "attributes": [
+      "\\HasNoChildren"
+    ],
+    "count": 3,
+    "unseen": 2
+  },
+  {
+    "user_email": "support@localhost",
+    "name": "Sent",
+    "path": "Sent",
+    "delimiter": "/",
+    "attributes": [
+      "\\HasNoChildren"
+    ],
+    "count": 0,
+    "unseen": 0
+  },
+  {
+    "user_email": "support@localhost",
+    "name": "Drafts",
+    "path": "Drafts",
+    "delimiter": "/",
+    "attributes": [
+      "\\HasNoChildren"
+    ],
+    "count": 0,
+    "unseen": 0
+  },
+  {
+    "user_email": "support@localhost",
+    "name": "Trash",
+    "path": "Trash",
+    "delimiter": "/",
+    "attributes": [
+      "\\HasNoChildren"
+    ],
+    "count": 0,
+    "unseen": 0
+  },
+  {
+    "user_email": "ceo@acme.test",
+    "name": "INBOX",
+    "path": "INBOX",
+    "delimiter": "/",
+    "attributes": [
+      "\\HasNoChildren"
+    ],
+    "count": 2,
+    "unseen": 1
+  },
+  {
+    "user_email": "ceo@acme.test",
+    "name": "Sent",
+    "path": "Sent",
+    "delimiter": "/",
+    "attributes": [
+      "\\HasNoChildren"
+    ],
+    "count": 0,
+    "unseen": 0
+  },
+  {
+    "user_email": "ceo@acme.test",
+    "name": "Drafts",
+    "path": "Drafts",
+    "delimiter": "/",
+    "attributes": [
+      "\\HasNoChildren"
+    ],
+    "count": 0,
+    "unseen": 0
+  },
+  {
+    "user_email": "ceo@acme.test",
+    "name": "Trash",
+    "path": "Trash",
+    "delimiter": "/",
+    "attributes": [
+      "\\HasNoChildren"
+    ],
+    "count": 0,
+    "unseen": 0
+  },
+  {
+    "user_email": "ops@acme.test",
+    "name": "INBOX",
+    "path": "INBOX",
+    "delimiter": "/",
+    "attributes": [
+      "\\HasNoChildren"
+    ],
+    "count": 2,
+    "unseen": 1
+  },
+  {
+    "user_email": "ops@acme.test",
+    "name": "Sent",
+    "path": "Sent",
+    "delimiter": "/",
+    "attributes": [
+      "\\HasNoChildren"
+    ],
+    "count": 0,
+    "unseen": 0
+  },
+  {
+    "user_email": "ops@acme.test",
+    "name": "Drafts",
+    "path": "Drafts",
+    "delimiter": "/",
+    "attributes": [
+      "\\HasNoChildren"
+    ],
+    "count": 0,
+    "unseen": 0
+  },
+  {
+    "user_email": "ops@acme.test",
+    "name": "Trash",
+    "path": "Trash",
+    "delimiter": "/",
+    "attributes": [
+      "\\HasNoChildren"
+    ],
+    "count": 0,
+    "unseen": 0
+  },
+  {
+    "user_email": "test@localhost",
+    "name": "Archive",
+    "path": "Archive",
+    "delimiter": "/",
+    "attributes": [
+      "\\HasNoChildren"
+    ],
+    "count": 0,
+    "unseen": 0
+  }
+]

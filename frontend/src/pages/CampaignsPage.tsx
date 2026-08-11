@@ -1,19 +1,43 @@
-import React from 'react'
+import React, { useState } from "react";
+import {
+    ChartBarIcon,
+    DocumentTextIcon,
+    ListBulletIcon,
+} from "@heroicons/react/24/outline";
+import CampaignList from "../components/campaigns/CampaignList";
+import CampaignAnalytics from "../components/campaigns/CampaignAnalytics";
+import TemplateGallery from "../components/campaigns/TemplateGallery";
+import Tabs, { type TabItem } from "../components/common/Tabs";
+
+type CampaignTab = "campaigns" | "templates" | "analytics";
+
+const TABS: TabItem<CampaignTab>[] = [
+    { id: "campaigns", label: "Campaigns", icon: ListBulletIcon },
+    { id: "templates", label: "Templates", icon: DocumentTextIcon },
+    { id: "analytics", label: "Analytics", icon: ChartBarIcon },
+];
 
 const CampaignsPage: React.FC = () => {
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Email Campaigns</h1>
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-6">
-          <p className="text-gray-600">Campaign management interface will be implemented here.</p>
-          <p className="text-sm text-gray-500 mt-2">
-            Features: Campaign builder, templates, scheduling, analytics, recipient management
-          </p>
-        </div>
-      </div>
-    </div>
-  )
-}
+    const [tab, setTab] = useState<CampaignTab>("campaigns");
 
-export default CampaignsPage
+    return (
+        <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
+            <div>
+                <h1 className="text-xl font-semibold text-content">
+                    Campaigns
+                </h1>
+                <p className="mt-1 text-sm text-content-muted">
+                    Build, schedule, and measure bulk sends from this mailbox.
+                </p>
+            </div>
+
+            <Tabs tabs={TABS} value={tab} onChange={setTab} />
+
+            {tab === "campaigns" && <CampaignList />}
+            {tab === "templates" && <TemplateGallery showActions />}
+            {tab === "analytics" && <CampaignAnalytics />}
+        </div>
+    );
+};
+
+export default CampaignsPage;

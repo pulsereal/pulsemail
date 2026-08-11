@@ -1,0 +1,661 @@
+[
+  {
+    "uid": "1",
+    "from": "john.doe@company.com",
+    "to": "test@localhost",
+    "subject": "Project Update - Q4 Goals",
+    "date": "2026-08-06T09:53:25.439Z",
+    "messageId": "msg1@example.com",
+    "flags": [],
+    "size": 2048,
+    "category": "work",
+    "folder": "INBOX",
+    "content": "<h2>Project Update</h2><p>Hi there,</p><p>I wanted to update you on our Q4 project goals and milestones. We're making great progress on the new feature implementation.</p><p>Key highlights:</p><ul><li>User authentication system completed</li><li>Dashboard analytics in progress</li><li>Mobile app beta testing scheduled</li></ul><p>Let me know if you have any questions!</p><p>Best regards,<br>John</p>"
+  },
+  {
+    "uid": "2",
+    "from": "newsletter@techcompany.com",
+    "to": "test@localhost",
+    "subject": "Weekly Tech Newsletter - Latest Updates",
+    "date": "2026-08-06T08:53:25.439Z",
+    "messageId": "msg2@example.com",
+    "flags": [
+      "\\Seen"
+    ],
+    "size": 3072,
+    "category": "promotional",
+    "folder": "INBOX",
+    "content": "<h1>Tech Weekly Newsletter</h1><p>Stay updated with the latest in technology!</p><h3>This Week's Highlights:</h3><ul><li>New AI developments in machine learning</li><li>Latest updates in cloud computing</li><li>Cybersecurity best practices</li></ul><p>Read more on our website!</p>"
+  },
+  {
+    "uid": "3",
+    "from": "support@service.com",
+    "to": "test@localhost",
+    "subject": "Your ticket #12345 has been resolved",
+    "date": "2026-08-05T10:53:25.439Z",
+    "messageId": "msg3@example.com",
+    "flags": [
+      "\\Seen"
+    ],
+    "size": 1536,
+    "category": "automated",
+    "folder": "Archive",
+    "content": "<p>Dear Customer,</p><p>Your support ticket #12345 regarding 'Login Issues' has been resolved.</p><p>Resolution: Updated authentication system to fix the login problem you were experiencing.</p><p>If you have any further questions, please don't hesitate to contact us.</p><p>Thank you for your patience!</p>"
+  },
+  {
+    "uid": "4",
+    "from": "sarah.friend@personal.com",
+    "to": "test@localhost",
+    "subject": "Lunch this weekend?",
+    "date": "2026-08-04T10:53:25.439Z",
+    "messageId": "msg4@example.com",
+    "flags": [
+      "\\Seen"
+    ],
+    "size": 512,
+    "category": "personal",
+    "folder": "INBOX",
+    "content": "<p>Hey!</p><p>Are you free for lunch this weekend? I was thinking we could try that new Italian restaurant downtown.</p><p>Let me know what works for you!</p><p>Sarah</p>"
+  },
+  {
+    "uid": "5",
+    "from": "urgent@business.com",
+    "to": "test@localhost",
+    "subject": "URGENT: Project deadline moved up",
+    "date": "2026-08-03T10:53:25.439Z",
+    "messageId": "msg5@example.com",
+    "flags": [
+      "\\Flagged"
+    ],
+    "size": 768,
+    "category": "important",
+    "folder": "INBOX",
+    "content": "<p><strong>URGENT</strong></p><p>The project deadline has been moved up to next Friday due to client requirements.</p><p>Please review your current tasks and let me know if you need any additional resources.</p><p>Thanks,<br>Project Manager</p>"
+  },
+  {
+    "uid": "6",
+    "from": "hr@company.com",
+    "to": "test@localhost",
+    "subject": "Monthly Team Meeting - Tomorrow at 10 AM",
+    "date": "2026-08-02T10:53:25.439Z",
+    "messageId": "msg6@example.com",
+    "flags": [
+      "\\Seen"
+    ],
+    "size": 1024,
+    "category": "work",
+    "folder": "INBOX",
+    "content": "<p>Hello Team,</p><p>Just a reminder that our monthly team meeting is scheduled for tomorrow at 10 AM in the conference room.</p><p>Agenda:</p><ul><li>Project updates</li><li>New initiatives</li><li>Q&A session</li></ul><p>Please come prepared with your updates.</p>"
+  },
+  {
+    "uid": "7",
+    "from": "marketing@brand.com",
+    "to": "test@localhost",
+    "subject": "Special Offer - 50% Off This Week Only!",
+    "date": "2026-08-01T10:53:25.439Z",
+    "messageId": "msg7@example.com",
+    "flags": [],
+    "size": 2560,
+    "category": "promotional",
+    "folder": "Junk",
+    "content": "<h2>Special Offer!</h2><p>Don't miss out on our biggest sale of the year!</p><p>Get 50% off all premium products this week only.</p><p>Use code: <strong>SAVE50</strong></p><p>Hurry, offer ends soon!</p>"
+  },
+  {
+    "uid": "8",
+    "from": "system@company.com",
+    "to": "test@localhost",
+    "subject": "Password Reset Request",
+    "date": "2026-07-31T10:53:25.439Z",
+    "messageId": "msg8@example.com",
+    "flags": [
+      "\\Seen"
+    ],
+    "size": 896,
+    "category": "automated",
+    "folder": "INBOX",
+    "content": "<p>Hello,</p><p>We received a request to reset your password. If you didn't make this request, please ignore this email.</p><p>To reset your password, click the link below:</p><p><a href='#'>Reset Password</a></p><p>This link will expire in 24 hours.</p>"
+  },
+  {
+    "uid": "9",
+    "from": "client@external.com",
+    "to": "test@localhost",
+    "subject": "Re: Proposal for Q1 2024",
+    "date": "2026-07-30T10:53:25.439Z",
+    "messageId": "msg9@example.com",
+    "flags": [
+      "\\Seen"
+    ],
+    "size": 1792,
+    "category": "work",
+    "folder": "INBOX",
+    "content": "<p>Hi there,</p><p>Thanks for the proposal. I've reviewed it and have a few questions:</p><ol><li>Can we adjust the timeline?</li><li>What about the budget considerations?</li><li>Do you have any references from similar projects?</li></ol><p>Let's discuss this further.</p><p>Best regards,<br>Client</p>"
+  },
+  {
+    "uid": "10",
+    "from": "family@personal.com",
+    "to": "test@localhost",
+    "subject": "Family dinner this Sunday",
+    "date": "2026-07-29T10:53:25.439Z",
+    "messageId": "msg10@example.com",
+    "flags": [
+      "\\Seen"
+    ],
+    "size": 640,
+    "category": "personal",
+    "folder": "INBOX",
+    "content": "<p>Hi dear,</p><p>Just wanted to remind you about family dinner this Sunday at 6 PM.</p><p>Mom is making your favorite lasagna!</p><p>See you there!</p><p>Love,<br>Family</p>"
+  },
+  {
+    "uid": "11",
+    "from": "admin@localhost",
+    "to": "test@localhost",
+    "subject": "System Maintenance Notice",
+    "date": "2026-07-28T10:53:25.439Z",
+    "messageId": "msg11@example.com",
+    "flags": [
+      "\\Seen"
+    ],
+    "size": 1152,
+    "category": "important",
+    "folder": "INBOX",
+    "content": "<p>System Maintenance Notice</p><p>We will be performing scheduled maintenance on Sunday from 2 AM to 6 AM.</p><p>During this time, some services may be temporarily unavailable.</p><p>We apologize for any inconvenience.</p>"
+  },
+  {
+    "uid": "13",
+    "from": "system@company.com",
+    "to": "admin@localhost",
+    "subject": "Daily System Report - All Systems Operational",
+    "date": "2026-08-06T10:23:25.439Z",
+    "messageId": "msg13@example.com",
+    "flags": [],
+    "size": 1536,
+    "category": "automated",
+    "folder": "INBOX",
+    "content": "<h2>Daily System Report</h2><p>All systems are operating normally.</p><p>Server uptime: 99.9%</p><p>Active users: 1,247</p><p>Storage usage: 67%</p><p>No critical issues detected.</p>"
+  },
+  {
+    "uid": "14",
+    "from": "security@company.com",
+    "to": "admin@localhost",
+    "subject": "Security Alert - New Login Attempts Detected",
+    "date": "2026-08-06T09:53:25.439Z",
+    "messageId": "msg14@example.com",
+    "flags": [
+      "\\Flagged"
+    ],
+    "size": 1024,
+    "category": "important",
+    "folder": "INBOX",
+    "content": "<p><strong>Security Alert</strong></p><p>Multiple login attempts detected from IP: 192.168.1.100</p><p>Time: 8/6/2026, 4:23:25 PM</p><p>Please review and take appropriate action if necessary.</p>"
+  },
+  {
+    "uid": "15",
+    "from": "hr@company.com",
+    "to": "admin@localhost",
+    "subject": "New Employee Onboarding - John Smith",
+    "date": "2026-08-06T08:53:25.449Z",
+    "messageId": "msg15@example.com",
+    "flags": [
+      "\\Seen"
+    ],
+    "size": 2048,
+    "category": "work",
+    "folder": "INBOX",
+    "content": "<p>Hello Admin,</p><p>New employee John Smith is starting next Monday.</p><p>Please set up the following:</p><ul><li>Email account: john.smith@company.com</li><li>Access to project management tools</li><li>VPN access</li><li>Security training completion</li></ul><p>Let me know if you need any additional information.</p>"
+  },
+  {
+    "uid": "16",
+    "from": "finance@company.com",
+    "to": "admin@localhost",
+    "subject": "Monthly Budget Review - IT Department",
+    "date": "2026-08-05T10:53:25.449Z",
+    "messageId": "msg16@example.com",
+    "flags": [
+      "\\Seen"
+    ],
+    "size": 3072,
+    "category": "work",
+    "folder": "INBOX",
+    "content": "<h2>Monthly Budget Review</h2><p>IT Department Budget Summary:</p><ul><li>Hardware: $15,000</li><li>Software licenses: $8,500</li><li>Cloud services: $12,000</li><li>Maintenance: $5,200</li></ul><p>Total: $40,700 (95% of allocated budget)</p><p>Please review and approve for next month.</p>"
+  },
+  {
+    "uid": "17",
+    "from": "vendor@techsupplier.com",
+    "to": "admin@localhost",
+    "subject": "Quote Request - Server Upgrade",
+    "date": "2026-08-04T10:53:25.449Z",
+    "messageId": "msg17@example.com",
+    "flags": [],
+    "size": 1792,
+    "category": "work",
+    "folder": "INBOX",
+    "content": "<p>Dear Admin,</p><p>As requested, here's the quote for the server upgrade:</p><p>Server Specifications:</p><ul><li>CPU: Intel Xeon E5-2680 v4</li><li>RAM: 64GB DDR4</li><li>Storage: 2TB SSD</li><li>Network: 10Gbps</li></ul><p>Total Cost: $12,500</p><p>Please let me know if you need any modifications.</p>"
+  },
+  {
+    "uid": "18",
+    "from": "design@studio.com",
+    "to": "sarah@localhost",
+    "subject": "Brand refresh — final mockups attached",
+    "date": "2026-08-06T10:08:25.450Z",
+    "messageId": "msg18@example.com",
+    "flags": [],
+    "size": 1690,
+    "category": "work",
+    "folder": "INBOX",
+    "content": "<p>Hi,</p><p>Brand refresh — final mockups attached</p><p>Sent to sarah@localhost for review.</p><p>Regards,<br>design@studio.com</p>"
+  },
+  {
+    "uid": "19",
+    "from": "test@localhost",
+    "to": "sarah@localhost",
+    "subject": "Re: Lunch this weekend?",
+    "date": "2026-08-06T06:53:25.450Z",
+    "messageId": "msg19@example.com",
+    "flags": [
+      "\\Seen"
+    ],
+    "size": 1727,
+    "category": "personal",
+    "folder": "INBOX",
+    "content": "<p>Hi,</p><p>Re: Lunch this weekend?</p><p>Sent to sarah@localhost for review.</p><p>Regards,<br>test@localhost</p>"
+  },
+  {
+    "uid": "20",
+    "from": "billing@saasvendor.com",
+    "to": "sarah@localhost",
+    "subject": "Invoice #4471 is due in 3 days",
+    "date": "2026-08-05T09:53:25.450Z",
+    "messageId": "msg20@example.com",
+    "flags": [],
+    "size": 1764,
+    "category": "automated",
+    "folder": "INBOX",
+    "content": "<p>Hi,</p><p>Invoice #4471 is due in 3 days</p><p>Sent to sarah@localhost for review.</p><p>Regards,<br>billing@saasvendor.com</p>"
+  },
+  {
+    "uid": "21",
+    "from": "angry.customer@example.com",
+    "to": "support@localhost",
+    "subject": "Still waiting on ticket #98120",
+    "date": "2026-08-06T10:41:25.450Z",
+    "messageId": "msg21@example.com",
+    "flags": [],
+    "size": 1801,
+    "category": "important",
+    "folder": "INBOX",
+    "content": "<p>Hi,</p><p>Still waiting on ticket #98120</p><p>Sent to support@localhost for review.</p><p>Regards,<br>angry.customer@example.com</p>"
+  },
+  {
+    "uid": "22",
+    "from": "noreply@statuspage.io",
+    "to": "support@localhost",
+    "subject": "Incident resolved: API latency",
+    "date": "2026-08-06T05:33:25.450Z",
+    "messageId": "msg22@example.com",
+    "flags": [
+      "\\Seen"
+    ],
+    "size": 1838,
+    "category": "automated",
+    "folder": "INBOX",
+    "content": "<p>Hi,</p><p>Incident resolved: API latency</p><p>Sent to support@localhost for review.</p><p>Regards,<br>noreply@statuspage.io</p>"
+  },
+  {
+    "uid": "23",
+    "from": "newuser@example.com",
+    "to": "support@localhost",
+    "subject": "How do I enable two-factor auth?",
+    "date": "2026-08-05T19:53:25.450Z",
+    "messageId": "msg23@example.com",
+    "flags": [],
+    "size": 1875,
+    "category": "work",
+    "folder": "INBOX",
+    "content": "<p>Hi,</p><p>How do I enable two-factor auth?</p><p>Sent to support@localhost for review.</p><p>Regards,<br>newuser@example.com</p>"
+  },
+  {
+    "uid": "24",
+    "from": "board@acme.test",
+    "to": "ceo@acme.test",
+    "subject": "Q3 board pack for review",
+    "date": "2026-08-06T09:23:25.450Z",
+    "messageId": "msg24@example.com",
+    "flags": [],
+    "size": 1912,
+    "category": "important",
+    "folder": "INBOX",
+    "content": "<p>Hi,</p><p>Q3 board pack for review</p><p>Sent to ceo@acme.test for review.</p><p>Regards,<br>board@acme.test</p>"
+  },
+  {
+    "uid": "25",
+    "from": "press@techjournal.com",
+    "to": "ceo@acme.test",
+    "subject": "Interview request for next issue",
+    "date": "2026-08-06T00:53:25.450Z",
+    "messageId": "msg25@example.com",
+    "flags": [
+      "\\Seen"
+    ],
+    "size": 1949,
+    "category": "work",
+    "folder": "INBOX",
+    "content": "<p>Hi,</p><p>Interview request for next issue</p><p>Sent to ceo@acme.test for review.</p><p>Regards,<br>press@techjournal.com</p>"
+  },
+  {
+    "uid": "26",
+    "from": "monitoring@acme.test",
+    "to": "ops@acme.test",
+    "subject": "Disk usage above 85% on db-primary",
+    "date": "2026-08-06T10:28:25.450Z",
+    "messageId": "msg26@example.com",
+    "flags": [],
+    "size": 1986,
+    "category": "important",
+    "folder": "INBOX",
+    "content": "<p>Hi,</p><p>Disk usage above 85% on db-primary</p><p>Sent to ops@acme.test for review.</p><p>Regards,<br>monitoring@acme.test</p>"
+  },
+  {
+    "uid": "27",
+    "from": "ceo@acme.test",
+    "to": "ops@acme.test",
+    "subject": "Can we get the deploy window moved?",
+    "date": "2026-08-06T04:13:25.450Z",
+    "messageId": "msg27@example.com",
+    "flags": [
+      "\\Seen"
+    ],
+    "size": 2023,
+    "category": "work",
+    "folder": "INBOX",
+    "content": "<p>Hi,</p><p>Can we get the deploy window moved?</p><p>Sent to ops@acme.test for review.</p><p>Regards,<br>ceo@acme.test</p>"
+  },
+  {
+    "uid": "28",
+    "from": "test@localhost",
+    "to": "test@localhost",
+    "recipients": "someone@example.com",
+    "subject": "Draft subject",
+    "date": "2026-08-06T15:56:31.209Z",
+    "messageId": "draft-28@localhost",
+    "flags": [
+      "\\Draft",
+      "\\Seen"
+    ],
+    "size": 23,
+    "category": "draft",
+    "folder": "Drafts",
+    "content": "<p>Work in progress</p>"
+  },
+  {
+    "uid": "29",
+    "from": "test@localhost",
+    "to": "test@localhost",
+    "recipients": "someone@example.com",
+    "subject": "Draft subject",
+    "date": "2026-08-06T15:57:16.450Z",
+    "messageId": "draft-29@localhost",
+    "flags": [
+      "\\Draft",
+      "\\Seen"
+    ],
+    "size": 23,
+    "category": "draft",
+    "folder": "Drafts",
+    "content": "<p>Work in progress</p>"
+  },
+  {
+    "uid": "30",
+    "from": "test@localhost",
+    "to": "test@localhost",
+    "recipients": "someone@example.com",
+    "subject": "Draft subject",
+    "date": "2026-08-06T16:47:17.556Z",
+    "messageId": "draft-30@localhost",
+    "flags": [
+      "\\Draft",
+      "\\Seen"
+    ],
+    "size": 23,
+    "category": "draft",
+    "folder": "Drafts",
+    "content": "<p>Work in progress</p>"
+  },
+  {
+    "uid": "31",
+    "from": "test@localhost",
+    "to": "test@localhost",
+    "recipients": "someone@example.com",
+    "subject": "Draft subject",
+    "date": "2026-08-06T16:54:18.421Z",
+    "messageId": "draft-31@localhost",
+    "flags": [
+      "\\Draft",
+      "\\Seen"
+    ],
+    "size": 23,
+    "category": "draft",
+    "folder": "Drafts",
+    "content": "<p>Work in progress</p>"
+  },
+  {
+    "uid": "32",
+    "from": "test@localhost",
+    "to": "test@localhost",
+    "recipients": "someone@example.com",
+    "subject": "Draft subject",
+    "date": "2026-08-06T16:55:07.679Z",
+    "messageId": "draft-32@localhost",
+    "flags": [
+      "\\Draft",
+      "\\Seen"
+    ],
+    "size": 23,
+    "category": "draft",
+    "folder": "Drafts",
+    "content": "<p>Work in progress</p>"
+  },
+  {
+    "uid": "33",
+    "from": "test@localhost",
+    "to": "test@localhost",
+    "recipients": "someone@example.com",
+    "subject": "Draft subject",
+    "date": "2026-08-06T17:09:08.640Z",
+    "messageId": "draft-33@localhost",
+    "flags": [
+      "\\Draft",
+      "\\Seen"
+    ],
+    "size": 23,
+    "category": "draft",
+    "folder": "Drafts",
+    "content": "<p>Work in progress</p>"
+  },
+  {
+    "uid": "34",
+    "from": "test@localhost",
+    "to": "test@localhost",
+    "recipients": "someone@example.com",
+    "subject": "Draft subject",
+    "date": "2026-08-06T17:10:32.022Z",
+    "messageId": "draft-34@localhost",
+    "flags": [
+      "\\Draft",
+      "\\Seen"
+    ],
+    "size": 23,
+    "category": "draft",
+    "folder": "Drafts",
+    "content": "<p>Work in progress</p>"
+  },
+  {
+    "uid": "35",
+    "from": "test@localhost",
+    "to": "test@localhost",
+    "recipients": "someone@example.com",
+    "subject": "Draft subject",
+    "date": "2026-08-06T17:15:11.549Z",
+    "messageId": "draft-35@localhost",
+    "flags": [
+      "\\Draft",
+      "\\Seen"
+    ],
+    "size": 23,
+    "category": "draft",
+    "folder": "Drafts",
+    "content": "<p>Work in progress</p>"
+  },
+  {
+    "uid": "36",
+    "from": "test@localhost",
+    "to": "test@localhost",
+    "recipients": "someone@example.com",
+    "subject": "Draft subject",
+    "date": "2026-08-06T17:15:45.484Z",
+    "messageId": "draft-36@localhost",
+    "flags": [
+      "\\Draft",
+      "\\Seen"
+    ],
+    "size": 23,
+    "category": "draft",
+    "folder": "Drafts",
+    "content": "<p>Work in progress</p>"
+  },
+  {
+    "uid": "37",
+    "from": "test@localhost",
+    "to": "test@localhost",
+    "recipients": "someone@example.com",
+    "subject": "Draft subject",
+    "date": "2026-08-06T17:24:31.349Z",
+    "messageId": "draft-37@localhost",
+    "flags": [
+      "\\Draft",
+      "\\Seen"
+    ],
+    "size": 23,
+    "category": "draft",
+    "folder": "Drafts",
+    "content": "<p>Work in progress</p>"
+  },
+  {
+    "uid": "38",
+    "from": "test@localhost",
+    "to": "test@localhost",
+    "recipients": "someone@example.com",
+    "subject": "Draft subject",
+    "date": "2026-08-07T09:46:55.957Z",
+    "messageId": "draft-38@localhost",
+    "flags": [
+      "\\Draft",
+      "\\Seen"
+    ],
+    "size": 23,
+    "category": "draft",
+    "folder": "Drafts",
+    "content": "<p>Work in progress</p>"
+  },
+  {
+    "uid": "39",
+    "from": "test@localhost",
+    "to": "test@localhost",
+    "recipients": "someone@example.com",
+    "subject": "Draft subject",
+    "date": "2026-08-07T15:30:49.017Z",
+    "messageId": "draft-39@localhost",
+    "flags": [
+      "\\Draft",
+      "\\Seen"
+    ],
+    "size": 23,
+    "category": "draft",
+    "folder": "Drafts",
+    "content": "<p>Work in progress</p>"
+  },
+  {
+    "uid": "40",
+    "from": "test@localhost",
+    "to": "test@localhost",
+    "recipients": "someone@example.com",
+    "subject": "Draft subject",
+    "date": "2026-08-07T15:31:23.189Z",
+    "messageId": "draft-40@localhost",
+    "flags": [
+      "\\Draft",
+      "\\Seen"
+    ],
+    "size": 23,
+    "category": "draft",
+    "folder": "Drafts",
+    "content": "<p>Work in progress</p>"
+  },
+  {
+    "uid": "41",
+    "from": "test@localhost",
+    "to": "test@localhost",
+    "recipients": "someone@example.com",
+    "subject": "Draft subject",
+    "date": "2026-08-07T15:40:05.973Z",
+    "messageId": "draft-41@localhost",
+    "flags": [
+      "\\Draft",
+      "\\Seen"
+    ],
+    "size": 23,
+    "category": "draft",
+    "folder": "Drafts",
+    "content": "<p>Work in progress</p>"
+  },
+  {
+    "uid": "42",
+    "from": "test@localhost",
+    "to": "test@localhost",
+    "recipients": "someone@example.com",
+    "subject": "Draft subject",
+    "date": "2026-08-07T15:48:23.486Z",
+    "messageId": "draft-42@localhost",
+    "flags": [
+      "\\Draft",
+      "\\Seen"
+    ],
+    "size": 23,
+    "category": "draft",
+    "folder": "Drafts",
+    "content": "<p>Work in progress</p>"
+  },
+  {
+    "uid": "43",
+    "from": "test@localhost",
+    "to": "test@localhost",
+    "recipients": "someone@example.com",
+    "subject": "Draft subject",
+    "date": "2026-08-07T15:49:02.943Z",
+    "messageId": "draft-43@localhost",
+    "flags": [
+      "\\Draft",
+      "\\Seen"
+    ],
+    "size": 23,
+    "category": "draft",
+    "folder": "Drafts",
+    "content": "<p>Work in progress</p>"
+  },
+  {
+    "uid": "44",
+    "from": "test@localhost",
+    "to": "test@localhost",
+    "recipients": "someone@example.com",
+    "subject": "Draft subject",
+    "date": "2026-08-11T16:33:19.372Z",
+    "messageId": "draft-44@localhost",
+    "flags": [
+      "\\Draft",
+      "\\Seen"
+    ],
+    "size": 23,
+    "category": "draft",
+    "folder": "Drafts",
+    "content": "<p>Work in progress</p>"
+  }
+]

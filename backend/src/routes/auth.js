@@ -9,7 +9,10 @@ const {
     validateEmail,
     validatePassword,
     authenticateToken,
+    clientIp,
 } = require("../middleware/auth");
+const { quotaMbToBytes } = require("../config/iredmail");
+const LLMSettingsService = require("../services/LLMSettingsService");
 
 const router = express.Router();
 
@@ -166,7 +169,8 @@ router.post("/admin/switch-mailbox", authenticateToken, async (req, res) => {
         // Perform the switch
         const switchedUser = await User.switchToMailbox(
             adminEmail,
-            targetEmail
+            targetEmail,
+            clientIp(req)
         );
 
         // Generate new token for the switched user
@@ -334,6 +338,12 @@ router.get("/me", authenticateToken, async (req, res) => {
             adminInfo = await User.isAdmin(email);
         }
 
+        // Which optional AI features the administrator has switched on, so the
+        // client can hide controls that would do nothing.
+        const llm = await LLMSettingsService.shared()
+            .get()
+            .catch(() => null);
+
         res.json({
             user: {
                 email: user.email,
@@ -346,6 +356,11 @@ router.get("/me", authenticateToken, async (req, res) => {
                 originalAdmin: req.user.originalAdmin || null,
                 ...adminInfo,
             },
+            features: {
+                aiSorting: Boolean(llm?.enabled && llm.classify_enabled),
+                aiSummaries: Boolean(llm?.enabled && llm.summaries_enabled),
+                aiReplies: Boolean(llm?.enabled && llm.replies_enabled),
+            },
         });
     } catch (error) {
         console.error("Get user error:", error);
@@ -357,17 +372,81 @@ router.get("/me", authenticateToken, async (req, res) => {
 router.put("/preferences", authenticateToken, async (req, res) => {
     try {
         const { email } = req.user;
-        const { preferences } = req.body;
+        const { preferences, name } = req.body;
 
-        await User.updatePreferences(email, preferences);
+        if (preferences) {
+            await User.updatePreferences(email, preferences);
+        }
+
+        if (typeof name === "string" && name.trim()) {
+            await User.updateDisplayName(email, name.trim());
+        }
+
+        const user = await User.findByEmail(email);
 
         res.json({
             success: true,
             message: "Preferences updated successfully",
+            user: {
+                email,
+                name: user?.name || name || null,
+                preferences: await User.getPreferences(email),
+            },
         });
     } catch (error) {
         console.error("Update preferences error:", error);
         res.status(500).json({ error: "Failed to update preferences" });
+    }
+});
+
+/**
+ * Self-service password change.
+ *
+ * Impersonating admins are blocked here on purpose: changing a password is a
+ * destructive action that must be attributable, so admins have to use
+ * PUT /api/admin/mailboxes/:email/password instead.
+ */
+router.post("/change-password", authenticateToken, async (req, res) => {
+    try {
+        const { email, isAdminSwitch } = req.user;
+        const { currentPassword, newPassword } = req.body;
+
+        if (isAdminSwitch) {
+            return res.status(403).json({
+                error: "Switch back to your own account to change a password",
+            });
+        }
+
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({
+                error: "Current and new password are both required",
+            });
+        }
+
+        if (newPassword.length < 8) {
+            return res
+                .status(400)
+                .json({ error: "New password must be at least 8 characters" });
+        }
+
+        const user = await User.findByEmail(email);
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        const valid = await User.verifyPassword(currentPassword, user.password);
+        if (!valid) {
+            return res
+                .status(401)
+                .json({ error: "Current password is incorrect" });
+        }
+
+        await User.changePassword(email, newPassword);
+
+        res.json({ success: true, message: "Password updated" });
+    } catch (error) {
+        console.error("Change password error:", error);
+        res.status(500).json({ error: "Failed to change password" });
     }
 });
 
@@ -652,17 +731,17 @@ router.get("/quota", authenticateToken, async (req, res) => {
             return res.status(404).json({ error: "User not found" });
         }
 
-        // In a real implementation, you would query the actual mailbox size
-        // This is a simplified version
-        const quotaInfo = {
-            used: 0, // Would be calculated from actual mailbox
-            total: user.quota || 0,
-            percentage: 0,
-        };
+        const usage = await User.getQuotaUsage(email);
+        const total = quotaMbToBytes(user.quota);
 
-        if (quotaInfo.total > 0) {
-            quotaInfo.percentage = (quotaInfo.used / quotaInfo.total) * 100;
-        }
+        const quotaInfo = {
+            used: usage.bytes,
+            messages: usage.messages,
+            total,
+            percentage: total > 0 ? (usage.bytes / total) * 100 : 0,
+            // False when Dovecot's quota_clone dict is not populating used_quota
+            tracked: usage.available,
+        };
 
         res.json({
             success: true,

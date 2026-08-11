@@ -3,9 +3,12 @@ const cors = require("cors");
 const helmet = require("helmet");
 require("dotenv").config();
 
+const { validateEnvironment } = require("./config/environment");
+const { verifyConnections } = require("./config/database");
+const AutomationService = require("./services/AutomationService");
+
 // Import middleware
 const {
-    corsMiddleware,
     errorHandler,
     requestLogger,
     securityHeaders,
@@ -18,10 +21,29 @@ const authRoutes = require("./routes/auth");
 const emailRoutes = require("./routes/emails");
 const campaignRoutes = require("./routes/campaigns");
 const automationRoutes = require("./routes/automation");
+const adminRoutes = require("./routes/admin");
+const provisioningRoutes = require("./routes/provisioning");
+const mailboxSettingsRoutes = require("./routes/mailbox-settings");
+const aiRoutes = require("./routes/ai");
+const LLMSettingsService = require("./services/LLMSettingsService");
+const ClassificationWorker = require("./services/ClassificationWorker");
 
 // Initialize Express app
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+/**
+ * Behind nginx every request arrives from the proxy, so without this the rate
+ * limiter buckets all users under one address and the first busy session locks
+ * everyone out. Set TRUST_PROXY to the number of proxies in front of the app
+ * (1 for a single nginx) rather than `true`, which would let a client forge
+ * X-Forwarded-For and evade the limiter entirely.
+ */
+const trustProxy = process.env.TRUST_PROXY;
+if (trustProxy) {
+    const hops = Number(trustProxy);
+    app.set("trust proxy", Number.isFinite(hops) ? hops : trustProxy);
+}
 
 // Basic security middleware
 app.use(
@@ -35,17 +57,33 @@ app.use(
 app.use(securityHeaders);
 app.use(cspMiddleware);
 
-// CORS configuration
+/**
+ * The deployment in DEPLOYMENT.md serves the built frontend and proxies /api
+ * from the same nginx host, so no cross-origin request happens at all. Set
+ * CORS_ORIGINS (comma separated) only when the frontend lives elsewhere.
+ */
+const corsOrigins = (process.env.CORS_ORIGINS || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+const developmentOrigins =
+    process.env.NODE_ENV === "production"
+        ? []
+        : ["http://localhost:3000", "http://localhost:5173"];
+
+const allowedOrigins = [...new Set([...corsOrigins, ...developmentOrigins])];
+
 app.use(
     cors({
-        origin: [
-            "http://localhost:3000",
-            "http://localhost:3001",
-            "https://your-domain.com",
-        ],
+        origin: (origin, callback) => {
+            // Same-origin and non-browser callers send no Origin header.
+            if (!origin) return callback(null, true);
+            callback(null, allowedOrigins.includes(origin));
+        },
         credentials: true,
         methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-        allowedHeaders: ["Content-Type", "Authorization"],
+        allowedHeaders: ["Content-Type", "Authorization", "X-Mailbox"],
     })
 );
 
@@ -73,6 +111,10 @@ app.use("/api/auth", authRoutes);
 app.use("/api/emails", emailRoutes);
 app.use("/api/campaigns", campaignRoutes);
 app.use("/api/automation", automationRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/admin", provisioningRoutes);
+app.use("/api/mailbox", mailboxSettingsRoutes);
+app.use("/api/admin/ai", aiRoutes);
 
 // API documentation endpoint
 app.get("/api/docs", (req, res) => {
@@ -188,16 +230,64 @@ const initializeDatabase = async () => {
       );
     `);
 
+        // A single row holding the LLM endpoint the administrator configured.
+        // The API key is stored encrypted; see config/secrets.js.
         await query(`
-      CREATE TABLE IF NOT EXISTS email_categories (
+      CREATE TABLE IF NOT EXISTS llm_settings (
+        id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+        enabled BOOLEAN NOT NULL DEFAULT FALSE,
+        base_url TEXT NOT NULL DEFAULT 'https://api.openai.com/v1',
+        api_key_encrypted TEXT,
+        model VARCHAR(128) NOT NULL DEFAULT 'gpt-4o-mini',
+        classify_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+        summaries_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+        replies_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+        importance_threshold SMALLINT NOT NULL DEFAULT 70,
+        snippet_chars INTEGER NOT NULL DEFAULT 500,
+        batch_size SMALLINT NOT NULL DEFAULT 10,
+        daily_limit INTEGER NOT NULL DEFAULT 2000,
+        lookback_days SMALLINT NOT NULL DEFAULT 7,
+        custom_instructions TEXT,
+        updated_at TIMESTAMP DEFAULT NOW(),
+        updated_by VARCHAR(255)
+      );
+    `);
+
+        // Keyed on Message-ID so a classification survives the message being
+        // moved between folders and survives a UIDVALIDITY reset. The folder,
+        // uid and uidvalidity columns are the locator used to pull a priority
+        // listing back out of IMAP, and are refreshed whenever we see the
+        // message again.
+        await query(`
+      CREATE TABLE IF NOT EXISTS email_classifications (
         user_email VARCHAR(255) NOT NULL,
-        email_uid VARCHAR(255) NOT NULL,
-        category VARCHAR(50) NOT NULL,
-        confidence DECIMAL(3,2) DEFAULT 0.8,
-        method VARCHAR(20) DEFAULT 'manual',
+        message_key VARCHAR(512) NOT NULL,
+        folder VARCHAR(255) NOT NULL,
+        uid BIGINT NOT NULL,
+        uidvalidity BIGINT NOT NULL DEFAULT 0,
+        category VARCHAR(32) NOT NULL DEFAULT 'other',
+        importance SMALLINT NOT NULL DEFAULT 0,
+        reason TEXT,
+        model VARCHAR(128),
+        method VARCHAR(16) NOT NULL DEFAULT 'llm',
+        pinned BOOLEAN NOT NULL DEFAULT FALSE,
+        message_date TIMESTAMP,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW(),
-        PRIMARY KEY (user_email, email_uid)
+        PRIMARY KEY (user_email, message_key)
+      );
+    `);
+
+        await query(`
+      CREATE TABLE IF NOT EXISTS llm_usage (
+        day DATE NOT NULL,
+        feature VARCHAR(32) NOT NULL,
+        requests INTEGER NOT NULL DEFAULT 0,
+        messages INTEGER NOT NULL DEFAULT 0,
+        prompt_tokens BIGINT NOT NULL DEFAULT 0,
+        completion_tokens BIGINT NOT NULL DEFAULT 0,
+        errors INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (day, feature)
       );
     `);
 
@@ -355,10 +445,91 @@ const initializeDatabase = async () => {
       );
     `);
 
+        // Audit trail for admins opening a mailbox that is not their own
+        await query(`
+      CREATE TABLE IF NOT EXISTS admin_mailbox_switches (
+        id SERIAL PRIMARY KEY,
+        admin_email VARCHAR(255) NOT NULL,
+        target_email VARCHAR(255) NOT NULL,
+        switched_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        ip_address VARCHAR(64) NOT NULL DEFAULT ''
+      );
+    `);
+
+        // Per-user signatures and send-as identities
+        await query(`
+      CREATE TABLE IF NOT EXISTS user_identities (
+        id SERIAL PRIMARY KEY,
+        user_email VARCHAR(255) NOT NULL,
+        from_address VARCHAR(255) NOT NULL,
+        display_name VARCHAR(255) NOT NULL DEFAULT '',
+        signature TEXT NOT NULL DEFAULT '',
+        is_default BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(user_email, from_address)
+      );
+    `);
+
+        /**
+         * Structured source of truth for the generated Dovecot Sieve script.
+         * The script itself lives on the mail server; these rows are what the
+         * UI edits and what the script is regenerated from.
+         */
+        await query(`
+      CREATE TABLE IF NOT EXISTS mail_filters (
+        id SERIAL PRIMARY KEY,
+        user_email VARCHAR(255) NOT NULL,
+        name VARCHAR(255) NOT NULL DEFAULT '',
+        priority INTEGER NOT NULL DEFAULT 0,
+        match_type VARCHAR(10) NOT NULL DEFAULT 'all',
+        conditions JSONB NOT NULL DEFAULT '[]',
+        actions JSONB NOT NULL DEFAULT '[]',
+        stop_processing BOOLEAN NOT NULL DEFAULT TRUE,
+        active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+        await query(`
+      CREATE TABLE IF NOT EXISTS vacation_settings (
+        user_email VARCHAR(255) PRIMARY KEY,
+        enabled BOOLEAN NOT NULL DEFAULT FALSE,
+        subject VARCHAR(255) NOT NULL DEFAULT 'Out of office',
+        body TEXT NOT NULL DEFAULT '',
+        start_date DATE,
+        end_date DATE,
+        interval_days INTEGER NOT NULL DEFAULT 7,
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
         // Create indexes for better performance
         await query(`
-      CREATE INDEX IF NOT EXISTS idx_email_categories_user_category 
-      ON email_categories(user_email, category);
+      CREATE INDEX IF NOT EXISTS idx_classifications_locator
+      ON email_classifications(user_email, folder, uidvalidity, uid);
+    `);
+
+        // Serves the priority listing: most important first within a folder.
+        await query(`
+      CREATE INDEX IF NOT EXISTS idx_classifications_priority
+      ON email_classifications(user_email, folder, importance DESC, message_date DESC);
+    `);
+
+        await query(`
+      CREATE INDEX IF NOT EXISTS idx_mail_filters_user_priority 
+      ON mail_filters(user_email, priority);
+    `);
+
+        await query(`
+      CREATE INDEX IF NOT EXISTS idx_admin_switches_admin_date 
+      ON admin_mailbox_switches(admin_email, switched_at DESC);
+    `);
+
+        await query(`
+      CREATE INDEX IF NOT EXISTS idx_user_identities_user 
+      ON user_identities(user_email);
     `);
 
         await query(`
@@ -388,13 +559,12 @@ const initializeDatabase = async () => {
     }
 };
 
-// Graceful shutdown handling
-const gracefulShutdown = (signal) => {
+const gracefulShutdown = (server, signal) => {
     console.log(`\n${signal} received. Starting graceful shutdown...`);
 
-    server.close((err) => {
-        if (err) {
-            console.error("Error during server close:", err);
+    server.close((error) => {
+        if (error) {
+            console.error("Error during server close:", error);
             process.exit(1);
         }
 
@@ -402,22 +572,35 @@ const gracefulShutdown = (signal) => {
         process.exit(0);
     });
 
-    // Force shutdown after 10 seconds
+    // systemd sends SIGKILL eventually; beat it to the punch with a clear log.
     setTimeout(() => {
         console.error(
             "Could not close connections in time, forcefully shutting down"
         );
         process.exit(1);
-    }, 10000);
+    }, 10000).unref();
 };
 
 // Start server
 const startServer = async () => {
     try {
-        // Initialize database
+        validateEnvironment();
+
+        // Surface an unreachable database now rather than on the first login
+        await verifyConnections();
+
         await initializeDatabase();
 
-        // Start the server
+        // Cron jobs and rule loading need the tables created above
+        await AutomationService.shared().init();
+
+        // Seed the settings row, then schedule the classifier only if an
+        // administrator has actually turned it on.
+        await LLMSettingsService.shared().ensureRow();
+        if ((await LLMSettingsService.shared().get()).classify_enabled) {
+            ClassificationWorker.shared().start();
+        }
+
         const server = app.listen(PORT, () => {
             console.log(
                 `🚀 Pulsemail Custom Client API Server running on port ${PORT}`
@@ -431,13 +614,12 @@ const startServer = async () => {
             );
         });
 
-        // Handle graceful shutdown
-        process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
-        process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+        process.on("SIGTERM", () => gracefulShutdown(server, "SIGTERM"));
+        process.on("SIGINT", () => gracefulShutdown(server, "SIGINT"));
 
         return server;
     } catch (error) {
-        console.error("Failed to start server:", error);
+        console.error("Failed to start server:", error.message);
         process.exit(1);
     }
 };
@@ -448,3 +630,4 @@ if (require.main === module) {
 }
 
 module.exports = app;
+module.exports.initializeDatabase = initializeDatabase;

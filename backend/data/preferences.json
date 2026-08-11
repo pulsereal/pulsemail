@@ -1,0 +1,21 @@
+[
+  {
+    "email": "test@localhost",
+    "preferences": {
+      "signature": "Best regards,\nTest User",
+      "autoResponses": {
+        "out_of_office": "I am currently out of office and will return on Monday.",
+        "thank_you": "Thank you for your email. I will get back to you soon."
+      },
+      "defaultTone": "professional",
+      "language": "en",
+      "theme": "light",
+      "notifications": {
+        "email": true,
+        "desktop": true
+      }
+    },
+    "created": "2025-07-26T05:13:11.002Z",
+    "updated": "2025-07-26T05:13:11.002Z"
+  }
+]

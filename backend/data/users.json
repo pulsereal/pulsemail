@@ -1,0 +1,56 @@
+[
+  {
+    "email": "test@localhost",
+    "password": "$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+    "name": "Test User",
+    "domain": "localhost",
+    "active": 1,
+    "created": "2026-08-06T10:53:25.438Z",
+    "updated": "2026-08-06T10:53:25.439Z"
+  },
+  {
+    "email": "admin@localhost",
+    "password": "$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+    "name": "Admin User",
+    "domain": "localhost",
+    "active": 1,
+    "created": "2026-08-06T10:53:25.439Z",
+    "updated": "2026-08-06T10:53:25.439Z"
+  },
+  {
+    "email": "sarah@localhost",
+    "password": "$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+    "name": "Sarah Chen",
+    "domain": "localhost",
+    "active": 1,
+    "created": "2026-08-06T10:53:25.439Z",
+    "updated": "2026-08-06T10:53:25.439Z"
+  },
+  {
+    "email": "support@localhost",
+    "password": "$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+    "name": "Support Desk",
+    "domain": "localhost",
+    "active": 1,
+    "created": "2026-08-06T10:53:25.439Z",
+    "updated": "2026-08-06T10:53:25.439Z"
+  },
+  {
+    "email": "ceo@acme.test",
+    "password": "$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+    "name": "Dana Reyes",
+    "domain": "acme.test",
+    "active": 1,
+    "created": "2026-08-06T10:53:25.439Z",
+    "updated": "2026-08-06T10:53:25.439Z"
+  },
+  {
+    "email": "ops@acme.test",
+    "password": "$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+    "name": "Acme Operations",
+    "domain": "acme.test",
+    "active": 1,
+    "created": "2026-08-06T10:53:25.439Z",
+    "updated": "2026-08-06T10:53:25.439Z"
+  }
+]

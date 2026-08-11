@@ -1,160 +1,198 @@
-import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
-import { apiClient } from '../services/api'
-
-interface User {
-  email: string
-  name: string
-  quota?: number
-  language?: string
-  has2FA: boolean
-  preferences?: any
-}
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import { adminAPI, apiClient, setAuthBridge } from "../services/api";
+import type { AccessibleMailbox, User } from "../types";
 
 interface AuthState {
-  user: User | null
-  token: string | null
-  isAuthenticated: boolean
-  isLoading: boolean
-  login: (email: string, password: string, twoFactorCode?: string) => Promise<void>
-  logout: () => void
-  refreshToken: () => Promise<void>
-  updateUser: (userData: Partial<User>) => void
-  setLoading: (loading: boolean) => void
+    user: User | null;
+    token: string | null;
+    isAuthenticated: boolean;
+    isLoading: boolean;
+
+    /** Mailbox the UI is currently acting on; equals user.email unless an admin switched. */
+    activeMailbox: string | null;
+    accessibleMailboxes: AccessibleMailbox[];
+    mailboxesLoading: boolean;
+
+    login: (
+        email: string,
+        password: string,
+        twoFactorCode?: string
+    ) => Promise<void>;
+    logout: () => void;
+    refreshToken: () => Promise<void>;
+    updateUser: (userData: Partial<User>) => void;
+    setLoading: (loading: boolean) => void;
+
+    setActiveMailbox: (mailbox: string) => void;
+    resetActiveMailbox: () => void;
+    loadAccessibleMailboxes: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
-  persist(
-    (set, get) => ({
-      user: null,
-      token: null,
-      isAuthenticated: false,
-      isLoading: false,
+    persist(
+        (set, get) => ({
+            user: null,
+            token: null,
+            isAuthenticated: false,
+            isLoading: false,
+            activeMailbox: null,
+            accessibleMailboxes: [],
+            mailboxesLoading: false,
 
-      login: async (email: string, password: string, twoFactorCode?: string) => {
-        set({ isLoading: true })
-        
-        try {
-          const response = await apiClient.post('/auth/login', {
-            email,
-            password,
-            twoFactorCode
-          })
+            login: async (email, password, twoFactorCode) => {
+                set({ isLoading: true });
 
-          const { token, user } = response.data
+                try {
+                    const response = await apiClient.post("/auth/login", {
+                        email,
+                        password,
+                        twoFactorCode,
+                    });
 
-          // Set token in API client
-          apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`
+                    const { token, user } = response.data;
 
-          set({
-            user,
-            token,
-            isAuthenticated: true,
-            isLoading: false
-          })
-        } catch (error) {
-          set({ isLoading: false })
-          throw error
+                    set({
+                        user,
+                        token,
+                        isAuthenticated: true,
+                        isLoading: false,
+                        activeMailbox: user.email,
+                        accessibleMailboxes: [],
+                    });
+
+                    if (user.isAdmin) {
+                        void get().loadAccessibleMailboxes();
+                    }
+                } catch (error) {
+                    set({ isLoading: false });
+                    throw error;
+                }
+            },
+
+            logout: () => {
+                set({
+                    user: null,
+                    token: null,
+                    isAuthenticated: false,
+                    isLoading: false,
+                    activeMailbox: null,
+                    accessibleMailboxes: [],
+                });
+            },
+
+            refreshToken: async () => {
+                try {
+                    const response = await apiClient.post("/auth/refresh");
+                    set({ token: response.data.token });
+                } catch (error) {
+                    get().logout();
+                    throw error;
+                }
+            },
+
+            updateUser: (userData) => {
+                set((state) => ({
+                    user: state.user ? { ...state.user, ...userData } : null,
+                }));
+            },
+
+            setLoading: (isLoading) => set({ isLoading }),
+
+            setActiveMailbox: (mailbox) => set({ activeMailbox: mailbox }),
+
+            resetActiveMailbox: () =>
+                set((state) => ({ activeMailbox: state.user?.email ?? null })),
+
+            loadAccessibleMailboxes: async () => {
+                const { user } = get();
+                if (!user?.isAdmin) return;
+
+                set({ mailboxesLoading: true });
+                try {
+                    const response = await adminAPI.getAccessibleMailboxes({
+                        limit: 500,
+                    });
+                    set({
+                        accessibleMailboxes: response.data.mailboxes || [],
+                        mailboxesLoading: false,
+                    });
+                } catch (error) {
+                    set({ mailboxesLoading: false });
+                }
+            },
+        }),
+        {
+            name: "auth-storage",
+            storage: createJSONStorage(() => localStorage),
+            partialize: (state) => ({
+                user: state.user,
+                token: state.token,
+                isAuthenticated: state.isAuthenticated,
+                activeMailbox: state.activeMailbox,
+            }),
+            onRehydrateStorage: () => (state) => {
+                if (state?.user && !state.activeMailbox) {
+                    state.activeMailbox = state.user.email;
+                }
+            },
         }
-      },
+    )
+);
 
-      logout: () => {
-        // Remove token from API client
-        delete apiClient.defaults.headers.common['Authorization']
-        
-        set({
-          user: null,
-          token: null,
-          isAuthenticated: false,
-          isLoading: false
-        })
-      },
+setAuthBridge({
+    getToken: () => useAuthStore.getState().token,
+    getActiveMailbox: () => useAuthStore.getState().activeMailbox,
+    getOwnEmail: () => useAuthStore.getState().user?.email ?? null,
+    onUnauthorized: () => useAuthStore.getState().logout(),
+});
 
-      refreshToken: async () => {
-        try {
-          const response = await apiClient.post('/auth/refresh')
-          const { token } = response.data
+/** True when an admin is reading or acting inside somebody else's mailbox. */
+export const useIsImpersonating = () =>
+    useAuthStore(
+        (state) =>
+            Boolean(state.activeMailbox) &&
+            state.activeMailbox !== state.user?.email
+    );
 
-          // Update token in API client
-          apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`
+export const useIsAdmin = () =>
+    useAuthStore((state) => Boolean(state.user?.isAdmin));
 
-          set({ token })
-        } catch (error) {
-          // If refresh fails, logout
-          get().logout()
-          throw error
-        }
-      },
+let refreshTimer: ReturnType<typeof setTimeout> | null = null;
 
-      updateUser: (userData: Partial<User>) => {
-        set(state => ({
-          user: state.user ? { ...state.user, ...userData } : null
-        }))
-      },
-
-      setLoading: (loading: boolean) => {
-        set({ isLoading: loading })
-      }
-    }),
-    {
-      name: 'auth-storage',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        user: state.user,
-        token: state.token,
-        isAuthenticated: state.isAuthenticated
-      }),
-      onRehydrateStorage: () => (state) => {
-        // Set token in API client when rehydrating
-        if (state?.token) {
-          apiClient.defaults.headers.common['Authorization'] = `Bearer ${state.token}`
-        }
-      }
+/** Refresh the JWT five minutes before it expires, or sign out if it already has. */
+const scheduleTokenRefresh = (token: string | null) => {
+    if (refreshTimer) {
+        clearTimeout(refreshTimer);
+        refreshTimer = null;
     }
-  )
-)
+    if (!token) return;
 
-// Auto-refresh token setup
-const setupTokenRefresh = () => {
-  const { refreshToken, logout, token } = useAuthStore.getState()
-  
-  if (!token) return
+    try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        const msUntilRefresh = payload.exp * 1000 - Date.now() - 5 * 60 * 1000;
 
-  // Decode JWT to get expiration time
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]))
-    const expiresAt = payload.exp * 1000 // Convert to milliseconds
-    const now = Date.now()
-    const timeToRefresh = expiresAt - now - 5 * 60 * 1000 // Refresh 5 minutes before expiry
-
-    if (timeToRefresh > 0) {
-      setTimeout(async () => {
-        try {
-          await refreshToken()
-          setupTokenRefresh() // Setup next refresh
-        } catch (error) {
-          console.error('Token refresh failed:', error)
-          logout()
+        if (msUntilRefresh <= 0) {
+            useAuthStore.getState().logout();
+            return;
         }
-      }, timeToRefresh)
-    } else {
-      // Token already expired, logout
-      logout()
-    }
-  } catch (error) {
-    console.error('Error parsing token:', error)
-    logout()
-  }
-}
 
-// Initialize token refresh on store creation
-if (typeof window !== 'undefined') {
-  useAuthStore.subscribe(
-    (state) => state.token,
-    (token) => {
-      if (token) {
-        setupTokenRefresh()
-      }
+        refreshTimer = setTimeout(() => {
+            useAuthStore
+                .getState()
+                .refreshToken()
+                .catch(() => useAuthStore.getState().logout());
+        }, msUntilRefresh);
+    } catch {
+        useAuthStore.getState().logout();
     }
-  )
+};
+
+if (typeof window !== "undefined") {
+    scheduleTokenRefresh(useAuthStore.getState().token);
+    useAuthStore.subscribe((state, previous) => {
+        if (state.token !== previous.token) {
+            scheduleTokenRefresh(state.token);
+        }
+    });
 }

@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "from_email": "test@localhost",
+    "to_email": "recipient@example.com",
+    "subject": "Test Email",
+    "content": "<p>This is a test email.</p>",
+    "message_id": "test-msg-1@localhost",
+    "sent_at": "2025-07-25T05:13:11.002Z"
+  },
+  {
+    "id": 2,
+    "from_email": "test@localhost",
+    "to_email": "another@example.com",
+    "subject": "Follow up",
+    "content": "<p>Following up on our conversation.</p>",
+    "message_id": "test-msg-2@localhost",
+    "sent_at": "2025-07-24T05:13:11.002Z"
+  }
+]

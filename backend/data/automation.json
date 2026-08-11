@@ -1,0 +1,22 @@
+[
+  {
+    "id": 1,
+    "user_email": "test@localhost",
+    "name": "Auto Reply to Support",
+    "trigger_type": "email_received",
+    "trigger_conditions": {
+      "from_domain": "support.com",
+      "subject_contains": "ticket"
+    },
+    "actions": [
+      {
+        "type": "send_reply",
+        "template": "support_auto_reply",
+        "delay": 0
+      }
+    ],
+    "active": true,
+    "created": "2025-07-26T05:13:11.002Z",
+    "updated": "2025-07-26T05:13:11.002Z"
+  }
+]

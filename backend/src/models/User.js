@@ -1,11 +1,14 @@
-const { query } = require("../config/database");
+// Identity and quota live in iRedMail's vmail (mailQuery); preferences, 2FA,
+// app passwords and the impersonation trail are ours (query).
+const { query, mailQuery } = require("../config/database");
 const bcrypt = require("bcryptjs");
+const { verifyPassword, hashPassword } = require("../config/iredmail");
 
 class User {
     // Get user by email (from mailbox table in Pulsemail)
     static async findByEmail(email) {
         try {
-            const result = await query(
+            const result = await mailQuery(
                 "SELECT * FROM mailbox WHERE username = $1",
                 [email]
             );
@@ -18,39 +21,23 @@ class User {
     // Check if user is admin (from domain_admins table in Pulsemail)
     static async isAdmin(email) {
         try {
-            // Check if user is in domain_admins table
-            const adminResult = await query(
+            const adminResult = await mailQuery(
                 "SELECT * FROM domain_admins WHERE username = $1",
                 [email]
             );
 
-            if (adminResult.rows.length > 0) {
-                return {
-                    isAdmin: true,
-                    adminType: "domain",
-                    domains: adminResult.rows.map((row) => row.domain),
-                };
+            if (adminResult.rows.length === 0) {
+                return { isAdmin: false, adminType: null, domains: [] };
             }
 
-            // Check if user is global admin (usually indicated by @ALL domain)
-            const globalAdminResult = await query(
-                "SELECT * FROM domain_admins WHERE username = $1 AND domain = $2",
-                [email, "ALL"]
-            );
+            const domains = adminResult.rows.map((row) => row.domain);
 
-            if (globalAdminResult.rows.length > 0) {
-                return {
-                    isAdmin: true,
-                    adminType: "global",
-                    domains: ["ALL"],
-                };
+            // iRedMail marks a global admin with the reserved "ALL" domain
+            if (domains.includes("ALL")) {
+                return { isAdmin: true, adminType: "global", domains: ["ALL"] };
             }
 
-            return {
-                isAdmin: false,
-                adminType: null,
-                domains: [],
-            };
+            return { isAdmin: true, adminType: "domain", domains };
         } catch (error) {
             console.error("Error checking admin status:", error);
             return {
@@ -85,7 +72,7 @@ class User {
                 params = adminInfo.domains;
             }
 
-            const result = await query(
+            const result = await mailQuery(
                 `
         SELECT 
           username as email,
@@ -109,8 +96,47 @@ class User {
         }
     }
 
+    /**
+     * Record an admin touching someone else's mailbox.
+     *
+     * Requests are deduplicated per admin/target pair within
+     * ADMIN_ACCESS_AUDIT_WINDOW_MS so a browsing session produces a readable
+     * audit trail instead of one row per API call.
+     */
+    static async logMailboxAccess(adminEmail, targetEmail, ipAddress) {
+        const windowMs = parseInt(
+            process.env.ADMIN_ACCESS_AUDIT_WINDOW_MS || "300000",
+            10
+        );
+        const key = `${adminEmail}->${targetEmail}`;
+        const now = Date.now();
+        const last = User._auditCache.get(key);
+
+        if (last && now - last < windowMs) return false;
+        User._auditCache.set(key, now);
+
+        try {
+            await query(
+                `
+        INSERT INTO admin_mailbox_switches (
+          admin_email, target_email, switched_at, ip_address
+        )
+        VALUES ($1, $2, NOW(), $3)
+      `,
+                [adminEmail, targetEmail, ipAddress || "0.0.0.0"]
+            );
+            return true;
+        } catch (error) {
+            console.error(
+                "Failed to write mailbox access audit:",
+                error.message
+            );
+            return false;
+        }
+    }
+
     // Switch to another mailbox (admin only)
-    static async switchToMailbox(adminEmail, targetEmail) {
+    static async switchToMailbox(adminEmail, targetEmail, ipAddress) {
         try {
             // Verify admin permissions
             const adminInfo = await this.isAdmin(adminEmail);
@@ -135,16 +161,8 @@ class User {
                 throw new Error("Access denied: No permission for this domain");
             }
 
-            // Log the mailbox switch for audit
-            await query(
-                `
-        INSERT INTO admin_mailbox_switches (
-          admin_email, target_email, switched_at, ip_address
-        )
-        VALUES ($1, $2, NOW(), $3)
-      `,
-                [adminEmail, targetEmail, "0.0.0.0"]
-            ); // IP will be set from middleware
+            User._auditCache.delete(`${adminEmail}->${targetEmail}`);
+            await this.logMailboxAccess(adminEmail, targetEmail, ipAddress);
 
             return {
                 id: targetUser.username,
@@ -193,8 +211,36 @@ class User {
             const user = await this.findByEmail(email);
             if (!user) return null;
 
-            // Pulsemail uses different password schemes
-            const isValid = await this.verifyPassword(password, user.password);
+            // Development mode: allow simple authentication for testing
+            const isDevelopment =
+                process.env.NODE_ENV === "development" &&
+                process.env.USE_MOCK_DATA === "true";
+
+            let isValid = false;
+
+            if (isDevelopment) {
+                // In development mode, accept simple passwords
+                if (
+                    password === "test" ||
+                    password === "admin" ||
+                    password === "123"
+                ) {
+                    console.log(
+                        "🔓 Development mode: Accepting simple password"
+                    );
+                    isValid = true;
+                } else {
+                    // Still try normal password verification
+                    isValid = await this.verifyPassword(
+                        password,
+                        user.password
+                    );
+                }
+            } else {
+                // Production mode: normal password verification
+                isValid = await this.verifyPassword(password, user.password);
+            }
+
             if (isValid) {
                 // Get admin status
                 const adminInfo = await this.isAdmin(email);
@@ -218,67 +264,77 @@ class User {
         }
     }
 
-    // Verify password based on Pulsemail schemes
+    // Verify a password against any scheme iRedMail may have written
     static async verifyPassword(plainPassword, hashedPassword) {
         try {
-            // Handle different password schemes used by Pulsemail
-            if (hashedPassword.startsWith("{SSHA512}")) {
-                // SSHA512 verification
-                return await this.verifySSSHA512(plainPassword, hashedPassword);
-            } else if (hashedPassword.startsWith("{SSHA256}")) {
-                // SSHA256 verification
-                return await this.verifySSSHA256(plainPassword, hashedPassword);
-            } else if (hashedPassword.startsWith("{SSHA}")) {
-                // SSHA verification
-                return await this.verifySSHA(plainPassword, hashedPassword);
-            } else if (
-                hashedPassword.startsWith("$2b$") ||
-                hashedPassword.startsWith("$2a$")
-            ) {
-                // bcrypt verification
-                return await bcrypt.compare(plainPassword, hashedPassword);
-            }
-            return false;
+            return await verifyPassword(plainPassword, hashedPassword);
         } catch (error) {
-            console.error("Password verification error:", error);
+            console.error("Password verification error:", error.message);
             return false;
         }
     }
 
-    // SSHA512 verification
-    static async verifySSSHA512(password, hash) {
-        const crypto = require("crypto");
-        const decoded = Buffer.from(hash.substring(9), "base64");
-        const salt = decoded.slice(64);
-        const hashedPassword = crypto
-            .createHash("sha512")
-            .update(password + salt.toString())
-            .digest();
-        return Buffer.compare(hashedPassword, decoded.slice(0, 64)) === 0;
+    /**
+     * Change a mailbox password in place. `passwordlastchange` is what
+     * iRedMail's password-expiry policy reads, so it has to move too.
+     */
+    static async changePassword(email, newPassword, scheme) {
+        const hashed = await hashPassword(newPassword, scheme);
+        await mailQuery(
+            `UPDATE mailbox
+                SET password = $2,
+                    passwordlastchange = NOW(),
+                    modified = NOW()
+              WHERE username = $1`,
+            [email, hashed]
+        );
+        return true;
     }
 
-    // SSHA256 verification
-    static async verifySSSHA256(password, hash) {
-        const crypto = require("crypto");
-        const decoded = Buffer.from(hash.substring(9), "base64");
-        const salt = decoded.slice(32);
-        const hashedPassword = crypto
-            .createHash("sha256")
-            .update(password + salt.toString())
-            .digest();
-        return Buffer.compare(hashedPassword, decoded.slice(0, 32)) === 0;
+    /**
+     * Real mailbox usage. Dovecot's quota_clone dict keeps `used_quota` in
+     * sync; the table is absent only when quota_clone is not configured.
+     */
+    static async getQuotaUsage(email) {
+        try {
+            const result = await mailQuery(
+                "SELECT bytes, messages FROM used_quota WHERE username = $1",
+                [email]
+            );
+            const row = result.rows[0];
+            if (!row) return { bytes: 0, messages: 0, available: true };
+
+            return {
+                bytes: parseInt(row.bytes || 0, 10),
+                messages: parseInt(row.messages || 0, 10),
+                available: true,
+            };
+        } catch (error) {
+            return { bytes: 0, messages: 0, available: false };
+        }
     }
 
-    // SSHA verification
-    static async verifySSHA(password, hash) {
-        const crypto = require("crypto");
-        const decoded = Buffer.from(hash.substring(6), "base64");
-        const salt = decoded.slice(20);
-        const hashedPassword = crypto
-            .createHash("sha1")
-            .update(password + salt.toString())
-            .digest();
-        return Buffer.compare(hashedPassword, decoded.slice(0, 20)) === 0;
+    // Dovecot's last_login dict stores unix epoch seconds per protocol
+    static async getLastLogin(email) {
+        try {
+            const [, domain] = email.split("@");
+            const result = await mailQuery(
+                `SELECT imap, pop3, lda FROM last_login
+                  WHERE username = $1 AND domain = $2`,
+                [email, domain]
+            );
+            const row = result.rows[0];
+            if (!row) return null;
+
+            const newest = Math.max(
+                parseInt(row.imap || 0, 10),
+                parseInt(row.pop3 || 0, 10),
+                parseInt(row.lda || 0, 10)
+            );
+            return newest > 0 ? new Date(newest * 1000).toISOString() : null;
+        } catch (error) {
+            return null;
+        }
     }
 
     // Get user preferences
@@ -311,6 +367,15 @@ class User {
         } catch (error) {
             throw new Error(`Error updating preferences: ${error.message}`);
         }
+    }
+
+    // Update the mailbox display name
+    static async updateDisplayName(email, name) {
+        await mailQuery("UPDATE mailbox SET name = $2 WHERE username = $1", [
+            email,
+            name,
+        ]);
+        return true;
     }
 
     // Get user's app passwords for 2FA
@@ -391,5 +456,7 @@ class User {
         }
     }
 }
+
+User._auditCache = new Map();
 
 module.exports = User;

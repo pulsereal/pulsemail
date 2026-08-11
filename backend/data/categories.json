@@ -1,0 +1,18 @@
+[
+  {
+    "user_email": "test@localhost",
+    "email_uid": "1",
+    "category": "work",
+    "confidence": 0.9,
+    "method": "llm",
+    "created": "2025-07-26T05:13:11.002Z"
+  },
+  {
+    "user_email": "test@localhost",
+    "email_uid": "2",
+    "category": "promotional",
+    "confidence": 0.8,
+    "method": "llm",
+    "created": "2025-07-26T05:13:11.002Z"
+  }
+]

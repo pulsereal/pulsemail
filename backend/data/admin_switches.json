@@ -1,0 +1,205 @@
+[
+  {
+    "id": 1,
+    "admin_email": "admin@localhost",
+    "target_email": "sarah@localhost",
+    "switched_at": "2026-08-06T10:56:25.305Z",
+    "ip_address": "::ffff:127.0.0.1"
+  },
+  {
+    "id": 2,
+    "admin_email": "ops@acme.test",
+    "target_email": "ceo@acme.test",
+    "switched_at": "2026-08-06T10:56:25.308Z",
+    "ip_address": "::ffff:127.0.0.1"
+  },
+  {
+    "id": 3,
+    "admin_email": "admin@localhost",
+    "target_email": "ceo@acme.test",
+    "switched_at": "2026-08-06T10:56:25.312Z",
+    "ip_address": "::ffff:127.0.0.1"
+  },
+  {
+    "id": 4,
+    "admin_email": "admin@localhost",
+    "target_email": "ops@acme.test",
+    "switched_at": "2026-08-06T10:56:25.313Z",
+    "ip_address": "::ffff:127.0.0.1"
+  },
+  {
+    "id": 5,
+    "admin_email": "admin@localhost",
+    "target_email": "support@localhost",
+    "switched_at": "2026-08-06T10:56:25.324Z",
+    "ip_address": "::ffff:127.0.0.1"
+  },
+  {
+    "id": 6,
+    "admin_email": "admin@localhost",
+    "target_email": "test@localhost",
+    "switched_at": "2026-08-06T10:56:25.324Z",
+    "ip_address": "::ffff:127.0.0.1"
+  },
+  {
+    "id": 7,
+    "admin_email": "admin@localhost",
+    "target_email": "sarah@localhost",
+    "switched_at": "2026-08-06T10:56:29.760Z",
+    "ip_address": "::ffff:127.0.0.1"
+  },
+  {
+    "id": 8,
+    "admin_email": "ops@acme.test",
+    "target_email": "ceo@acme.test",
+    "switched_at": "2026-08-06T10:56:29.762Z",
+    "ip_address": "::ffff:127.0.0.1"
+  },
+  {
+    "id": 9,
+    "admin_email": "admin@localhost",
+    "target_email": "ceo@acme.test",
+    "switched_at": "2026-08-06T10:56:29.765Z",
+    "ip_address": "::ffff:127.0.0.1"
+  },
+  {
+    "id": 10,
+    "admin_email": "admin@localhost",
+    "target_email": "ops@acme.test",
+    "switched_at": "2026-08-06T10:56:29.765Z",
+    "ip_address": "::ffff:127.0.0.1"
+  },
+  {
+    "id": 11,
+    "admin_email": "admin@localhost",
+    "target_email": "support@localhost",
+    "switched_at": "2026-08-06T10:56:29.765Z",
+    "ip_address": "::ffff:127.0.0.1"
+  },
+  {
+    "id": 12,
+    "admin_email": "admin@localhost",
+    "target_email": "test@localhost",
+    "switched_at": "2026-08-06T10:56:29.765Z",
+    "ip_address": "::ffff:127.0.0.1"
+  },
+  {
+    "id": 13,
+    "admin_email": "admin@localhost",
+    "target_email": "sarah@localhost",
+    "switched_at": "2026-08-06T10:56:56.276Z",
+    "ip_address": "::ffff:127.0.0.1"
+  },
+  {
+    "id": 14,
+    "admin_email": "ops@acme.test",
+    "target_email": "ceo@acme.test",
+    "switched_at": "2026-08-06T10:56:56.278Z",
+    "ip_address": "::ffff:127.0.0.1"
+  },
+  {
+    "id": 15,
+    "admin_email": "admin@localhost",
+    "target_email": "ceo@acme.test",
+    "switched_at": "2026-08-06T10:56:56.281Z",
+    "ip_address": "::ffff:127.0.0.1"
+  },
+  {
+    "id": 16,
+    "admin_email": "admin@localhost",
+    "target_email": "ops@acme.test",
+    "switched_at": "2026-08-06T10:56:56.281Z",
+    "ip_address": "::ffff:127.0.0.1"
+  },
+  {
+    "id": 17,
+    "admin_email": "admin@localhost",
+    "target_email": "support@localhost",
+    "switched_at": "2026-08-06T10:56:56.281Z",
+    "ip_address": "::ffff:127.0.0.1"
+  },
+  {
+    "id": 18,
+    "admin_email": "admin@localhost",
+    "target_email": "test@localhost",
+    "switched_at": "2026-08-06T10:56:56.282Z",
+    "ip_address": "::ffff:127.0.0.1"
+  },
+  {
+    "id": 19,
+    "admin_email": "admin@localhost",
+    "target_email": "sarah@localhost",
+    "switched_at": "2026-08-06T15:07:00.453Z",
+    "ip_address": "::ffff:127.0.0.1"
+  },
+  {
+    "id": 20,
+    "admin_email": "ops@acme.test",
+    "target_email": "ceo@acme.test",
+    "switched_at": "2026-08-06T15:07:00.455Z",
+    "ip_address": "::ffff:127.0.0.1"
+  },
+  {
+    "id": 21,
+    "admin_email": "admin@localhost",
+    "target_email": "ceo@acme.test",
+    "switched_at": "2026-08-06T15:07:00.457Z",
+    "ip_address": "::ffff:127.0.0.1"
+  },
+  {
+    "id": 22,
+    "admin_email": "admin@localhost",
+    "target_email": "ops@acme.test",
+    "switched_at": "2026-08-06T15:07:00.458Z",
+    "ip_address": "::ffff:127.0.0.1"
+  },
+  {
+    "id": 23,
+    "admin_email": "admin@localhost",
+    "target_email": "support@localhost",
+    "switched_at": "2026-08-06T15:07:00.458Z",
+    "ip_address": "::ffff:127.0.0.1"
+  },
+  {
+    "id": 24,
+    "admin_email": "admin@localhost",
+    "target_email": "test@localhost",
+    "switched_at": "2026-08-06T15:07:00.458Z",
+    "ip_address": "::ffff:127.0.0.1"
+  },
+  {
+    "id": 25,
+    "admin_email": "admin@localhost",
+    "target_email": "sarah@localhost",
+    "switched_at": "2026-08-06T15:07:50.043Z",
+    "ip_address": "::1"
+  },
+  {
+    "id": 26,
+    "admin_email": "admin@localhost",
+    "target_email": "ceo@acme.test",
+    "switched_at": "2026-08-06T15:07:50.073Z",
+    "ip_address": "::1"
+  },
+  {
+    "id": 27,
+    "admin_email": "admin@localhost",
+    "target_email": "ops@acme.test",
+    "switched_at": "2026-08-06T15:07:50.073Z",
+    "ip_address": "::1"
+  },
+  {
+    "id": 28,
+    "admin_email": "admin@localhost",
+    "target_email": "support@localhost",
+    "switched_at": "2026-08-06T15:07:50.073Z",
+    "ip_address": "::1"
+  },
+  {
+    "id": 29,
+    "admin_email": "admin@localhost",
+    "target_email": "test@localhost",
+    "switched_at": "2026-08-06T15:07:50.073Z",
+    "ip_address": "::1"
+  }
+]

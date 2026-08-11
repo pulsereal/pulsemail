@@ -40,117 +40,268 @@ A comprehensive custom email client for Pulsemail with enhanced features includi
 
 ## Prerequisites
 
--   **Pulsemail Server**: Fully configured with PostgreSQL backend
--   **Node.js**: Version 16 or higher
--   **PostgreSQL**: Access to Pulsemail's vmail database
--   **SMTP/IMAP**: Access to mail server ports
--   **SpamAssassin** (optional): For spam testing features
--   **OpenAI API Key** (optional): For AI features
+-   **iRedMail server**: fully configured with the PostgreSQL backend
+-   **Node.js**: version 18 or higher
+-   **PostgreSQL**: access to iRedMail's `vmail` database, plus rights to create one more database
+-   **Dovecot**: IMAP, and Pigeonhole ManageSieve on port 4190 for filters and vacation replies
+-   **Postfix**: submission on port 587
+-   **SpamAssassin** (optional): for spam scoring of outgoing mail
+-   **OpenAI API key** (optional): for AI features
+
+### How this client talks to your mail server
+
+Understanding this makes the rest of the guide make sense.
+
+The client never stores or replays a user's mailbox password. After a user
+authenticates against `mailbox.password` in the `vmail` database, every IMAP and
+ManageSieve session is opened through a **Dovecot master user**: the client logs
+in as `alice@example.com*pulsemail-master` using the master password. Dovecot
+grants access to Alice's mailbox on the strength of the master credential alone.
+
+This is also exactly what makes admin cross-mailbox access work. An admin
+browsing another user's inbox is the same mechanism, authorised by
+`domain_admins` rather than by knowing the target's password.
+
+**If you skip the master user setup in step 3, nobody will be able to read mail.**
 
 ## Installation
 
-### 1. Clone and Setup
+### 0. Preflight
+
+Before changing anything, inventory the target server. `deploy/preflight.sh` is
+read-only — it writes no files, installs nothing and restarts no services — and
+reports what is present, what is missing and what would block the deployment.
+
+Run it straight over SSH without copying it to the server:
 
 ```bash
-# Clone the repository
+ssh user@mailserver 'sudo bash -s' < deploy/preflight.sh
+```
+
+It reports blockers as `[STOP]` and things worth reviewing as `[warn]`. The
+checks that most often decide whether a deployment succeeds are whether
+ManageSieve is listening on 4190, whether the password schemes in
+`mailbox.password` are ones this client implements, whether port 3001 is free,
+and whether anyone holds `domain='ALL'` in `domain_admins`. Run it with `sudo`;
+without root the Dovecot, Postfix and database sections are largely unreadable
+and the report says so rather than guessing.
+
+### Scripted installation
+
+For an existing iRedMail host, `deploy/install.sh` performs everything in the
+manual steps below. It is additive: it does not edit `dovecot.conf`, restart
+Dovecot, or touch the Roundcube, iRedAdmin or SOGo nginx blocks. The client is
+installed on its own hostname, because the built frontend uses absolute asset
+paths and a router without a `basename`, so it cannot be served from a subpath.
+
+```bash
+# 1. Point a DNS A record at the server first; certbot needs it to resolve.
+
+# 2. Copy the repository up
+rsync -az -e 'ssh -p 777' --exclude node_modules --exclude .git --exclude dist \
+      ./ user@mailserver:/tmp/pulsemail-client/
+
+# 3. Install
+ssh -p 777 user@mailserver \
+  'sudo WEBMAIL_HOST=webmail.example.com CERTBOT_EMAIL=you@example.com \
+   bash /tmp/pulsemail-client/deploy/install.sh'
+```
+
+The installer generates its own secrets, creates a `pulsemail` database and
+role, grants that role read/write on only the iRedMail tables the client uses,
+adds a Dovecot master user, and verifies the master login before continuing. It
+finishes by running `backend/scripts/verify-live.js`, which exercises IMAP and
+ManageSieve against the real server — the parts no mock can prove.
+
+Undo everything with `sudo bash deploy/rollback.sh`, or
+`sudo PURGE_DATA=yes bash deploy/rollback.sh` to drop the database too.
+
+#### If the master passdb is not already configured
+
+`preflight.sh` reports this. iRedMail usually ships the `passdb` block and an
+empty `/etc/dovecot/dovecot-master-users`, in which case the installer only
+appends a line and runs `doveadm reload` — no restart, no dropped sessions. If
+the block is genuinely absent, add it manually per step 3 below before running
+the installer, since that does require a Dovecot restart.
+
+### 1. Clone and set up
+
+```bash
 cd /opt/
 git clone <repository-url> pulsemail-client
 cd pulsemail-client
 
-# Set permissions
 chown -R nginx:nginx /opt/pulsemail-client  # Adjust user as needed
 chmod -R 755 /opt/pulsemail-client
 ```
 
-### 2. Database Setup
+### 2. Database setup
+
+The client uses **two** databases.
+
+`vmail` is iRedMail's. Postfix and Dovecot read it directly, so the client only
+touches the documented iRedMail schema (`mailbox`, `domain`, `alias`,
+`forwardings`, `domain_admins`, `used_quota`) and never creates tables there.
+
+Everything the client owns — preferences, 2FA, app passwords, campaigns,
+automation rules, mail filters, identities, the impersonation audit trail —
+lives in a separate `pulsemail` database. Keeping them apart means the schema
+bootstrap needs DDL rights on our database only, and an iRedMail upgrade can
+never collide with our tables.
 
 ```bash
-# Connect to PostgreSQL as the postgres user
-sudo -u postgres psql
-
-# Run the database setup script
-\i /opt/pulsemail-client/database_setup.sql
-
-# Exit PostgreSQL
-\q
+sudo -u postgres psql <<'SQL'
+CREATE ROLE pulsemail WITH LOGIN PASSWORD 'choose_a_strong_password';
+CREATE DATABASE pulsemail OWNER pulsemail;
+SQL
 ```
 
-### 3. Backend Configuration
+Grant the same role read/write on the iRedMail tables the client needs. It does
+not need DDL rights on `vmail`:
+
+```bash
+sudo -u postgres psql vmail <<'SQL'
+GRANT CONNECT ON DATABASE vmail TO pulsemail;
+GRANT USAGE ON SCHEMA public TO pulsemail;
+GRANT SELECT, INSERT, UPDATE, DELETE ON
+  mailbox, domain, domain_admins, alias, alias_domain, forwardings
+  TO pulsemail;
+GRANT SELECT ON used_quota, last_login TO pulsemail;
+SQL
+```
+
+The application's own tables are created automatically on first boot, so there
+is no migration step to run.
+
+### 3. Dovecot master user
+
+Create the master password file. Use a long random password; it grants access
+to every mailbox on the server.
+
+```bash
+MASTER_PASS=$(openssl rand -base64 32)
+echo "pulsemail-master:$(doveadm pw -s SSHA512 -p "$MASTER_PASS")" \
+  | sudo tee /etc/dovecot/dovecot.master.passwd
+sudo chmod 600 /etc/dovecot/dovecot.master.passwd
+sudo chown dovecot:dovecot /etc/dovecot/dovecot.master.passwd
+echo "Master password (put this in IMAP_MASTER_PASS): $MASTER_PASS"
+```
+
+Add the master passdb to `/etc/dovecot/dovecot.conf`. It must appear **before**
+the regular SQL passdb:
+
+```
+passdb {
+  driver = passwd-file
+  args = /etc/dovecot/dovecot.master.passwd
+  master = yes
+  result_success = continue
+}
+```
+
+`result_success = continue` is what makes the separator login work: Dovecot
+accepts the master credential and then proceeds to look up the target mailbox.
+
+Enable ManageSieve so mail filters and vacation replies reach the server:
+
+```
+protocols = imap lmtp sieve
+
+service managesieve-login {
+  inet_listener sieve {
+    port = 4190
+  }
+}
+
+plugin {
+  sieve = file:/var/vmail/sieve/%d/%n/scripts;active=/var/vmail/sieve/%d/%n/active.sieve
+}
+```
+
+Restart and verify:
+
+```bash
+sudo systemctl restart dovecot
+
+# Should report "OK" - proves the master login works end to end
+doveadm auth login 'postmaster@yourdomain.com*pulsemail-master' "$MASTER_PASS"
+```
+
+### 4. Backend configuration
 
 ```bash
 cd /opt/pulsemail-client/backend
-
-# Install dependencies
-npm install
-
-# Copy environment configuration
+npm ci --omit=dev
 cp .env.example .env
-
-# Edit the configuration file
 nano .env
 ```
 
-**Configure `.env` file:**
+`.env.example` documents every variable inline. The settings that matter most in
+production:
 
 ```env
-# Environment
 NODE_ENV=production
 PORT=3001
 
-# Database Configuration (Pulsemail PostgreSQL)
+# iRedMail's database - no DDL rights needed here
 DB_HOST=localhost
-DB_PORT=5432
 DB_NAME=vmail
-DB_USER=vmail
-DB_PASSWORD=your_vmail_password_here
+DB_USER=pulsemail
+DB_PASSWORD=choose_a_strong_password
 
-# Email Server Configuration
+# This application's own database - created on first boot
+APP_DB_NAME=pulsemail
+APP_DB_USER=pulsemail
+APP_DB_PASSWORD=choose_a_strong_password
+
+# Dovecot master user from step 3. Without these, no mail can be read.
+IMAP_HOST=localhost
+IMAP_PORT=143
+IMAP_MASTER_USER=pulsemail-master
+IMAP_MASTER_PASS=the_master_password_from_step_3
+IMAP_MASTER_SEPARATOR=*
+
+# ManageSieve, for filters and the vacation responder
+SIEVE_HOST=localhost
+SIEVE_PORT=4190
+
 SMTP_HOST=localhost
 SMTP_PORT=587
-SMTP_SECURE=false
 SMTP_USER=your_admin@yourdomain.com
 SMTP_PASS=your_admin_password
 
-IMAP_HOST=localhost
-IMAP_PORT=143
-IMAP_SECURE=false
+# At least 32 characters. Generate with: openssl rand -base64 48
+# Changing this invalidates every existing session.
+JWT_SECRET=
 
-# JWT Configuration
-JWT_SECRET=your_super_secret_jwt_key_minimum_32_characters
-JWT_EXPIRES_IN=7d
+# Number of reverse proxies in front of the app. Required behind nginx:
+# without it the rate limiter sees every request as coming from the proxy
+# and one busy user locks out everyone else.
+TRUST_PROXY=1
 
-# SpamAssassin (optional)
-SPAMASSASSIN_HOST=localhost
-SPAMASSASSIN_PORT=783
-
-# OpenAI API (optional - for AI features)
-OPENAI_API_KEY=your_openai_api_key_here
-
-# Application
-APP_NAME=Pulsemail Client
-
-# Rate Limiting
-RATE_LIMIT_WINDOW_MS=900000
-RATE_LIMIT_MAX_REQUESTS=100
-
-# Logging
-LOG_LEVEL=info
-LOG_FILE=logs/app.log
+# Leave empty when nginx serves the frontend and proxies /api from the same
+# host, as configured below. No cross-origin request happens in that layout.
+CORS_ORIGINS=
 ```
 
-### 4. Frontend Configuration
+The server validates this configuration at startup and **refuses to start** in
+production if the JWT secret, database password or master credentials are
+missing or still hold example placeholders. A failed start prints exactly which
+variable is at fault.
+
+### 5. Frontend configuration
 
 ```bash
 cd /opt/pulsemail-client/frontend
-
-# Install dependencies
-npm install
-
-# Build for production
+npm ci
 npm run build
 ```
 
-### 5. System Service Setup
+This writes `dist/`, which nginx serves directly. The production build omits
+source maps. The API base URL is the relative path `/api`, so no build-time
+configuration is needed as long as nginx proxies `/api` from the same host.
+
+### 6. System service setup
 
 Create a systemd service file:
 
@@ -188,7 +339,7 @@ sudo systemctl start pulsemail-client
 sudo systemctl status pulsemail-client
 ```
 
-### 6. Web Server Configuration
+### 7. Web server configuration
 
 #### For Nginx
 
@@ -276,6 +427,41 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
+## Verifying the installation
+
+Work through these in order. Each one isolates a different integration, so the
+first failure tells you which component to look at.
+
+```bash
+# 1. The process starts. Configuration problems are reported here and the
+#    service refuses to start rather than failing later on a user request.
+sudo systemctl status pulsemail-client
+sudo journalctl -u pulsemail-client -n 50
+
+# 2. The API is up
+curl -s localhost:3001/health
+
+# 3. Authentication against the vmail database
+curl -s -X POST localhost:3001/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"you@yourdomain.com","password":"your_password"}'
+
+# 4. Reading mail through the Dovecot master user. Save the token from step 3.
+TOKEN=... # the "token" field from step 3
+curl -s localhost:3001/api/emails?limit=5 -H "Authorization: Bearer $TOKEN"
+
+# 5. Admin cross-mailbox access, if you logged in as a domain admin
+curl -s localhost:3001/api/emails?limit=5 \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Mailbox: someone-else@yourdomain.com"
+
+# 6. ManageSieve. Should return an empty list rather than an error.
+curl -s localhost:3001/api/mailbox/filters -H "Authorization: Bearer $TOKEN"
+```
+
+Step 4 failing while step 3 succeeds almost always means the Dovecot master user
+is misconfigured; recheck `doveadm auth login` from step 3 of the installation.
+
 ## Configuration
 
 ### 1. Admin User Setup
@@ -305,11 +491,45 @@ sudo systemctl enable spamassassin
 sudo systemctl start spamassassin
 ```
 
-#### OpenAI API Setup
+#### AI importance sorting
 
-1. Get an API key from [OpenAI](https://platform.openai.com)
-2. Add the key to your `.env` file
-3. Restart the backend service
+Scores incoming mail so users get a **Priority** view in the inbox. Configured
+entirely from the admin panel under **Administration → AI Sorting**; nothing
+needs to go in `.env` and no restart is required.
+
+1. Sign in as a global admin and open **AI Sorting**.
+2. Pick a preset or enter any endpoint that speaks the OpenAI chat-completions
+   API. That covers OpenAI, Azure OpenAI, OpenRouter, Groq and Together, as
+   well as a model you host yourself with Ollama or vLLM.
+3. Enter the API key if the endpoint needs one, then use **Test connection**
+   before saving. The key is encrypted at rest and never returned to the
+   browser afterwards.
+4. Turn on **Enable AI features** and **Importance sorting**, then **Save**.
+
+Classification runs in a background job on a five-minute timer, never inside a
+user request, so an unreachable or slow endpoint cannot delay the inbox. Its
+cost is bounded by the daily message cap and by how far back it looks, both set
+on the same page. **Run now** triggers a pass immediately.
+
+Three settings are worth deliberate choices:
+
+-   **Priority threshold** — the score at which mail enters the Priority view.
+    Start at 70 and lower it if too little is being promoted.
+-   **Body characters sent** — how much of each message reaches the endpoint.
+    Set this to `0` to send only sender and subject, which keeps message bodies
+    on your server at some cost in accuracy.
+-   **Daily message cap** — an upper bound on spend across the whole server.
+
+If mail must not leave the machine at all, point the base URL at a locally
+hosted model; the request path is identical.
+
+Set `SECRET_ENCRYPTION_KEY` in `.env` before configuring the endpoint. Without
+it the API key is encrypted using `JWT_SECRET`, which means rotating that
+secret silently invalidates the stored key and an admin has to re-enter it.
+
+Summaries and suggested replies are separate switches on the same page. Both
+are off by default because summaries add an LLM round trip to every message
+that is opened.
 
 ## Replacing RoundCube
 
@@ -386,33 +606,37 @@ sudo -u postgres psql vmail -c "
 
 ### 3. Performance Optimization
 
-#### Backend Optimization
+#### Backend process management
+
+The systemd unit above is sufficient for most installations. If you prefer PM2:
 
 ```bash
-# Use PM2 for better process management
 npm install -g pm2
 
-# Create PM2 ecosystem file
-cat > /opt/pulsemail-client/backend/ecosystem.config.js << EOF
+cat > /opt/pulsemail-client/backend/ecosystem.config.js << 'EOF'
 module.exports = {
   apps: [{
     name: 'pulsemail-client',
     script: 'src/server.js',
     cwd: '/opt/pulsemail-client/backend',
-    instances: 'max',
-    exec_mode: 'cluster',
-    env: {
-      NODE_ENV: 'production'
-    }
+    instances: 1,
+    exec_mode: 'fork',
+    env: { NODE_ENV: 'production' }
   }]
 }
 EOF
 
-# Start with PM2
 pm2 start ecosystem.config.js
 pm2 save
 pm2 startup
 ```
+
+**Do not run this in cluster mode.** The automation scheduler and follow-up
+cron jobs are per-process, so every extra worker fires every scheduled rule
+again — users would receive duplicate auto-replies and follow-ups. The
+in-memory rate limiter is also per-process, so limits would be multiplied by the
+worker count. Scale by giving the single process more memory rather than by
+adding workers; the workload is I/O-bound on IMAP, not CPU-bound.
 
 #### Database Optimization
 
@@ -451,26 +675,31 @@ ssl_prefer_server_ciphers off;
 ssl_dhparam /etc/ssl/dhparam.pem;  # Generate with: openssl dhparam -out /etc/ssl/dhparam.pem 2048
 ```
 
-### 3. Rate Limiting
+### 3. Rate limiting
 
-The application includes built-in rate limiting, but you can add additional protection:
+The application limits requests per authenticated mailbox, falling back to the
+client address for unauthenticated requests. Defaults are in `.env.example`.
+
+Set `TRUST_PROXY=1` or the limiter cannot see real client addresses and applies
+one shared budget to your entire user base.
+
+If you add nginx-level limits as well, keep them generous. A webmail client
+issues one request per folder listing plus one per message opened, so a limit
+tuned for a typical REST API will break normal reading:
 
 ```nginx
-# Add to Nginx configuration
 http {
-    limit_req_zone $binary_remote_addr zone=api:10m rate=10r/m;
+    limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
     limit_req_zone $binary_remote_addr zone=login:10m rate=5r/m;
 }
 
 server {
     location /api/auth/login {
-        limit_req zone=login burst=3 nodelay;
-        # ... rest of configuration
+        limit_req zone=login burst=5 nodelay;
     }
 
     location /api/ {
-        limit_req zone=api burst=20 nodelay;
-        # ... rest of configuration
+        limit_req zone=api burst=50 nodelay;
     }
 }
 ```
@@ -489,7 +718,35 @@ server {
     sudo -u postgres psql vmail -c "SELECT version();"
     ```
 
-2. **IMAP/SMTP Connection Issues**
+2. **Login works but no mail appears**
+
+    Almost always the Dovecot master user. Test it directly:
+
+    ```bash
+    doveadm auth login 'user@yourdomain.com*pulsemail-master' 'master_password'
+    ```
+
+    If that fails, check that the master `passdb` block appears *before* the SQL
+    `passdb` in `dovecot.conf`, that it sets `result_success = continue`, and
+    that `IMAP_MASTER_SEPARATOR` in `.env` matches Dovecot's
+    `auth_master_user_separator` (both default to `*`).
+
+3. **Filters and vacation replies do not take effect**
+
+    ManageSieve is not reachable. Confirm the service is listening and that
+    `sieve` is in the `protocols` line:
+
+    ```bash
+    ss -lntp | grep 4190
+    doveconf -n | grep -A5 managesieve
+    ```
+
+4. **Everyone is rate limited at once**
+
+    `TRUST_PROXY` is unset, so every request appears to come from nginx. Set
+    `TRUST_PROXY=1` and restart.
+
+5. **IMAP/SMTP connection issues**
 
     ```bash
     # Test IMAP connection
@@ -499,35 +756,38 @@ server {
     telnet localhost 587
     ```
 
-3. **Frontend Build Issues**
+6. **Frontend build issues**
 
     ```bash
-    # Clear node modules and rebuild
     cd /opt/pulsemail-client/frontend
-    rm -rf node_modules package-lock.json
-    npm install
+    rm -rf node_modules
+    npm ci
     npm run build
     ```
 
-4. **Permission Issues**
+    Keep `package-lock.json`; deleting it defeats the point of `npm ci` and can
+    pull in versions that were never tested together.
+
+7. **Permission issues**
+
     ```bash
-    # Fix file permissions
     sudo chown -R nginx:nginx /opt/pulsemail-client
     sudo chmod -R 755 /opt/pulsemail-client
     ```
 
-### Debug Mode
+### Debugging
 
-Enable debug mode for troubleshooting:
+The service logs to the journal, so `journalctl -u pulsemail-client -f` is the
+main tool. Two extra switches are available in `.env`:
 
-```bash
-# Edit .env file
-NODE_ENV=development
-LOG_LEVEL=debug
-
-# Restart service
-sudo systemctl restart pulsemail-client
+```env
+# Log every SQL statement with its duration and row count. Very noisy.
+DB_DEBUG=true
 ```
+
+Leaving `NODE_ENV=production` while debugging is deliberate: switching to
+`development` skips input validation and changes error responses, so problems
+you see there may not reflect production behaviour.
 
 ## Backup and Recovery
 
@@ -544,8 +804,9 @@ DATE=$(date +%Y%m%d_%H%M%S)
 # Create backup directory
 mkdir -p $BACKUP_DIR
 
-# Backup database
+# Backup both databases: iRedMail's, and this application's
 sudo -u postgres pg_dump vmail > $BACKUP_DIR/vmail_$DATE.sql
+sudo -u postgres pg_dump pulsemail > $BACKUP_DIR/pulsemail_$DATE.sql
 
 # Backup application files
 tar -czf $BACKUP_DIR/pulsemail-client_$DATE.tar.gz /opt/pulsemail-client
@@ -576,21 +837,23 @@ sudo systemctl start pulsemail-client
 ### Updating the Application
 
 ```bash
-# Pull latest changes
 cd /opt/pulsemail-client
 git pull origin main
 
-# Update backend
 cd backend
-npm install
+npm ci --omit=dev
 sudo systemctl restart pulsemail-client
 
-# Update frontend
 cd ../frontend
-npm install
+npm ci
 npm run build
 sudo systemctl reload nginx
 ```
+
+New application tables are created automatically on restart, so there is no
+separate migration step. Watch `journalctl -u pulsemail-client -n 30` after the
+restart: a configuration variable added by an update will stop the service with
+an explicit message rather than letting it run half-configured.
 
 ### Getting Help
 

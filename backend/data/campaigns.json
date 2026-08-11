@@ -1,0 +1,39 @@
+[
+  {
+    "id": 1,
+    "user_email": "test@localhost",
+    "name": "Welcome Campaign",
+    "subject": "Welcome to our platform!",
+    "content": "<h1>Welcome!</h1><p>Thank you for joining us.</p>",
+    "recipients": [
+      {
+        "email": "user1@example.com",
+        "name": "User One"
+      },
+      {
+        "email": "user2@example.com",
+        "name": "User Two"
+      }
+    ],
+    "status": "draft",
+    "created": "2025-07-26T05:13:11.002Z",
+    "updated": "2025-07-26T05:13:11.002Z"
+  },
+  {
+    "id": 2,
+    "user_email": "test@localhost",
+    "name": "Product Launch",
+    "subject": "New Product Available Now!",
+    "content": "<h1>New Product</h1><p>Check out our latest offering.</p>",
+    "recipients": [
+      {
+        "email": "customer1@example.com",
+        "name": "Customer One"
+      }
+    ],
+    "status": "sent",
+    "sent_at": "2025-07-25T05:13:11.002Z",
+    "created": "2025-07-24T05:13:11.002Z",
+    "updated": "2025-07-25T05:13:11.002Z"
+  }
+]
