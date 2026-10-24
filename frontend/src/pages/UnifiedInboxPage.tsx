@@ -164,11 +164,12 @@ const UnifiedInboxPage: React.FC = () => {
     const failed = perMailbox.filter((entry) => entry.error);
 
     return (
-        <div className="flex h-[calc(100vh-4rem)] overflow-hidden rounded-xl border border-line bg-surface">
-            <aside className="hidden w-64 shrink-0 flex-col border-r border-line lg:flex">
-                <div className="border-b border-line p-3">
+        <div className="flex h-full overflow-hidden bg-surface">
+            <aside className="hidden w-56 shrink-0 flex-col border-r border-line lg:flex">
+                <div className="border-b border-line p-2">
                     <Input
                         type="search"
+                        size="sm"
                         value={search}
                         onChange={(event) => setSearch(event.target.value)}
                         placeholder="Filter mailboxes"
@@ -179,7 +180,7 @@ const UnifiedInboxPage: React.FC = () => {
                         <Button
                             variant="ghost"
                             size="xs"
-                            className="mt-2"
+                            className="mt-1.5"
                             onClick={() => setMailboxFilter(new Set())}
                         >
                             Clear {mailboxFilter.size} filter
@@ -188,10 +189,10 @@ const UnifiedInboxPage: React.FC = () => {
                     )}
                 </div>
 
-                <div className="min-h-0 flex-1 overflow-y-auto p-2 scrollbar-thin">
+                <div className="min-h-0 flex-1 space-y-px overflow-y-auto p-1.5 scrollbar-thin">
                     {statsQuery.isLoading &&
                         Array.from({ length: 5 }).map((_, index) => (
-                            <Skeleton key={index} className="mb-1.5 h-9" />
+                            <Skeleton key={index} className="mb-1 h-8" />
                         ))}
 
                     {mailboxes.map((entry) => {
@@ -204,22 +205,22 @@ const UnifiedInboxPage: React.FC = () => {
                                 type="button"
                                 onClick={() => toggleMailbox(entry.mailbox)}
                                 className={clsx(
-                                    "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition-colors",
+                                    "flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm transition-colors",
                                     active
                                         ? "bg-primary-100 text-primary-700"
                                         : "text-content-muted hover:bg-surface-hover hover:text-content"
                                 )}
                             >
                                 <span className="min-w-0 flex-1">
-                                    <span className="block truncate font-medium">
+                                    <span className="block truncate font-medium leading-5">
                                         {entry.name || entry.mailbox}
                                     </span>
-                                    <span className="block truncate text-xs text-content-subtle">
+                                    <span className="block truncate text-2xs text-content-subtle">
                                         {entry.mailbox}
                                     </span>
                                 </span>
                                 {unread > 0 && (
-                                    <span className="shrink-0 rounded-full bg-surface-sunken px-1.5 py-0.5 text-2xs font-semibold text-content-subtle">
+                                    <span className="shrink-0 rounded-full bg-surface-sunken px-1.5 text-2xs font-semibold text-content-subtle">
                                         {unread}
                                     </span>
                                 )}
@@ -229,41 +230,42 @@ const UnifiedInboxPage: React.FC = () => {
                 </div>
             </aside>
 
-            <section className="flex w-full shrink-0 flex-col border-r border-line md:w-80 xl:w-96">
-                <div className="shrink-0 border-b border-line px-4 py-3">
-                    <div className="flex items-center justify-between gap-2">
-                        <h2 className="text-sm font-semibold text-content">
+            <section className="flex w-full shrink-0 flex-col border-r border-line md:w-80 xl:w-88">
+                <div className="shrink-0 border-b border-line px-3 py-2">
+                    <div className="flex h-7 items-center gap-1.5">
+                        <h2 className="min-w-0 flex-1 truncate text-sm font-semibold text-content">
                             All inboxes
-                            <span className="ml-2 font-normal text-content-subtle">
+                            <span className="ml-1.5 font-normal text-content-subtle">
                                 {emails.length}
                             </span>
+                            {mailboxFilter.size > 0 && (
+                                <span className="ml-1.5 text-xs font-normal text-content-subtle">
+                                    · {mailboxFilter.size} mailbox
+                                    {mailboxFilter.size === 1 ? "" : "es"}
+                                </span>
+                            )}
                         </h2>
                         <Button
+                            variant={unreadOnly ? "primary" : "outline"}
+                            size="xs"
+                            className="shrink-0"
+                            onClick={() => setUnreadOnly((value) => !value)}
+                        >
+                            Unread only
+                        </Button>
+                        <Button
                             variant="ghost"
-                            size="sm"
+                            size="xs"
                             aria-label="Refresh"
+                            title="Refresh"
+                            className="shrink-0"
                             loading={listQuery.isFetching}
                             onClick={refreshAll}
                             icon={<ArrowPathIcon className="h-4 w-4" />}
                         />
                     </div>
-                    <div className="mt-3 flex items-center gap-2">
-                        <Button
-                            variant={unreadOnly ? "primary" : "outline"}
-                            size="xs"
-                            onClick={() => setUnreadOnly((value) => !value)}
-                        >
-                            Unread only
-                        </Button>
-                        {mailboxFilter.size > 0 && (
-                            <span className="text-xs text-content-subtle">
-                                {mailboxFilter.size} mailbox
-                                {mailboxFilter.size === 1 ? "" : "es"}
-                            </span>
-                        )}
-                    </div>
                     {failed.length > 0 && (
-                        <p className="mt-2 text-xs text-warning-700">
+                        <p className="mt-1 text-xs text-warning-700">
                             {failed.length} mailbox
                             {failed.length === 1 ? "" : "es"} could not be read.
                         </p>

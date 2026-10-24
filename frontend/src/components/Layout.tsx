@@ -44,10 +44,10 @@ const NavList: React.FC<{
     }, [items]);
 
     return (
-        <nav className="flex-1 space-y-6 px-3 py-4">
+        <nav className="flex-1 space-y-4 px-2 py-3">
             {sections.map(([section, sectionItems]) => (
                 <div key={section}>
-                    <p className="px-3 pb-2 text-2xs font-semibold uppercase tracking-wider text-sidebar-muted">
+                    <p className="px-2.5 pb-1 text-2xs font-semibold uppercase tracking-wider text-sidebar-muted">
                         {SECTION_LABELS[section]}
                     </p>
                     <div className="space-y-0.5">
@@ -59,7 +59,7 @@ const NavList: React.FC<{
                                 onClick={onNavigate}
                                 className={({ isActive }) =>
                                     clsx(
-                                        "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                                        "group flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors",
                                         isActive
                                             ? "bg-sidebar-active text-primary-600"
                                             : "text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-content"
@@ -70,7 +70,7 @@ const NavList: React.FC<{
                                     <>
                                         <item.icon
                                             className={clsx(
-                                                "h-5 w-5 shrink-0",
+                                                "h-4 w-4 shrink-0",
                                                 isActive
                                                     ? "text-primary-600"
                                                     : "text-sidebar-muted group-hover:text-sidebar-content"
@@ -89,11 +89,11 @@ const NavList: React.FC<{
 };
 
 const Brand: React.FC = () => (
-    <div className="flex h-16 shrink-0 items-center gap-2.5 border-b border-line px-5">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600 text-sm font-bold text-white">
+    <div className="flex h-12 shrink-0 items-center gap-2 border-b border-line px-4">
+        <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary-600 text-xs font-bold text-white">
             P
         </span>
-        <span className="text-base font-semibold text-sidebar-content">
+        <span className="text-sm font-semibold text-sidebar-content">
             Pulsemail
         </span>
     </div>
@@ -168,12 +168,13 @@ const Layout: React.FC = () => {
                 </Dialog>
             </Transition>
 
-            <aside className="hidden w-64 shrink-0 flex-col border-r border-line bg-sidebar lg:flex">
+            <aside className="hidden w-52 shrink-0 flex-col border-r border-line bg-sidebar lg:flex">
                 <Brand />
                 <NavList items={navItems} />
-                <div className="border-t border-line p-3">
+                <div className="border-t border-line p-2">
                     <Button
                         fullWidth
+                        size="sm"
                         icon={<PencilSquareIcon className="h-4 w-4" />}
                         onClick={() => openCompose()}
                     >
@@ -184,21 +185,21 @@ const Layout: React.FC = () => {
 
             <div className="flex min-w-0 flex-1 flex-col">
                 <header className="z-20 shrink-0 border-b border-line bg-surface">
-                    <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
+                    <div className="flex h-12 items-center gap-2 px-3 sm:px-4">
                         <button
                             type="button"
                             onClick={() => setSidebarOpen(true)}
                             aria-label="Open navigation"
-                            className="rounded-lg p-2 text-content-muted transition-colors hover:bg-surface-hover lg:hidden"
+                            className="rounded-md p-1.5 text-content-muted transition-colors hover:bg-surface-hover lg:hidden"
                         >
                             <Bars3Icon className="h-5 w-5" />
                         </button>
 
-                        <h1 className="truncate text-base font-semibold text-content">
+                        <h1 className="truncate text-sm font-semibold text-content">
                             {current?.name ?? "Pulsemail"}
                         </h1>
 
-                        <div className="ml-auto flex items-center gap-2 sm:gap-3">
+                        <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
                             <div className="hidden sm:block">
                                 <MailboxSwitcher />
                             </div>
@@ -214,12 +215,12 @@ const Layout: React.FC = () => {
                                     type="button"
                                     onClick={toggleTheme}
                                     aria-label="Toggle theme"
-                                    className="rounded-lg p-2 text-content-muted transition-colors hover:bg-surface-hover hover:text-content"
+                                    className="rounded-md p-1.5 text-content-muted transition-colors hover:bg-surface-hover hover:text-content"
                                 >
                                     {resolvedTheme === "dark" ? (
-                                        <SunIcon className="h-5 w-5" />
+                                        <SunIcon className="h-4 w-4" />
                                     ) : (
-                                        <MoonIcon className="h-5 w-5" />
+                                        <MoonIcon className="h-4 w-4" />
                                     )}
                                 </button>
                             </Tooltip>
@@ -228,11 +229,11 @@ const Layout: React.FC = () => {
                                 trigger={
                                     <button
                                         type="button"
-                                        className="flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-surface-hover"
+                                        className="flex items-center gap-2 rounded-md p-1 transition-colors hover:bg-surface-hover"
                                     >
-                                        <UserCircleIcon className="h-7 w-7 text-content-subtle" />
+                                        <UserCircleIcon className="h-6 w-6 text-content-subtle" />
                                         <span className="hidden text-left md:block">
-                                            <span className="block text-sm font-medium leading-tight text-content">
+                                            <span className="block text-xs font-medium leading-tight text-content">
                                                 {user?.name}
                                             </span>
                                             <span className="block text-xs leading-tight text-content-subtle">
@@ -261,7 +262,7 @@ const Layout: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="border-t border-line px-4 py-2 sm:hidden">
+                    <div className="border-t border-line px-3 py-1.5 sm:hidden">
                         <MailboxSwitcher className="w-full sm:w-full" />
                     </div>
                 </header>

@@ -1,19 +1,45 @@
 import React, { forwardRef, useId } from "react";
 import clsx from "clsx";
 
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+/** Heights line up with the outline `Button` of the same size. */
+export type FieldSize = "xs" | "sm" | "md";
+
+interface InputProps extends Omit<
+    React.InputHTMLAttributes<HTMLInputElement>,
+    "size"
+> {
     label?: string;
     error?: string;
     helpText?: string;
     icon?: React.ReactNode;
     iconPosition?: "left" | "right";
     action?: React.ReactNode;
+    size?: FieldSize;
 }
 
-export const fieldClasses = (hasError?: boolean) =>
+const fieldTextClasses: Record<FieldSize, string> = {
+    xs: "text-xs",
+    sm: "text-sm",
+    md: "sm:text-sm",
+};
+
+export const fieldLabelClasses = (size: FieldSize = "md") =>
+    clsx(
+        "block text-sm font-medium text-content",
+        size === "md" ? "mb-1.5" : "mb-1"
+    );
+
+const inputSizeClasses: Record<FieldSize, string> = {
+    xs: "px-2 py-1",
+    sm: "px-2.5 py-1.5",
+    md: "px-3 py-2",
+};
+
+export const fieldClasses = (hasError?: boolean, size: FieldSize = "md") =>
     clsx(
         "block w-full rounded-lg bg-surface text-content placeholder:text-content-subtle",
-        "border shadow-sm transition-colors sm:text-sm",
+        "border shadow-sm transition-colors",
+        fieldTextClasses[size],
         "focus:ring-2 focus:ring-offset-0",
         hasError
             ? "border-danger-400 focus:border-danger-500 focus:ring-danger-500/40"
@@ -30,6 +56,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             icon,
             iconPosition = "left",
             action,
+            size = "md",
             className,
             id,
             ...props
@@ -43,20 +70,26 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             : helpText
               ? `${inputId}-help`
               : undefined;
+        const large = size === "md";
 
         return (
             <div className="w-full">
                 {label && (
                     <label
                         htmlFor={inputId}
-                        className="mb-1.5 block text-sm font-medium text-content"
+                        className={fieldLabelClasses(size)}
                     >
                         {label}
                     </label>
                 )}
                 <div className="relative">
                     {icon && iconPosition === "left" && (
-                        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-content-subtle">
+                        <span
+                            className={clsx(
+                                "pointer-events-none absolute inset-y-0 left-0 flex items-center text-content-subtle",
+                                large ? "pl-3" : "pl-2.5"
+                            )}
+                        >
                             {icon}
                         </span>
                     )}
@@ -66,11 +99,13 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
                         aria-invalid={error ? true : undefined}
                         aria-describedby={describedBy}
                         className={clsx(
-                            fieldClasses(Boolean(error)),
-                            "px-3 py-2",
-                            icon && iconPosition === "left" && "pl-10",
+                            fieldClasses(Boolean(error), size),
+                            inputSizeClasses[size],
+                            icon &&
+                                iconPosition === "left" &&
+                                (large ? "pl-10" : "pl-8"),
                             ((icon && iconPosition === "right") || action) &&
-                                "pr-10",
+                                (large ? "pr-10" : "pr-8"),
                             className
                         )}
                         {...props}
@@ -82,7 +117,12 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
                     ) : (
                         icon &&
                         iconPosition === "right" && (
-                            <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-content-subtle">
+                            <span
+                                className={clsx(
+                                    "pointer-events-none absolute inset-y-0 right-0 flex items-center text-content-subtle",
+                                    large ? "pr-3" : "pr-2.5"
+                                )}
+                            >
                                 {icon}
                             </span>
                         )

@@ -34,6 +34,13 @@ const sizeClasses = {
     lg: "px-5 py-2.5 text-base gap-2 rounded-lg",
 };
 
+const iconOnlySizeClasses = {
+    xs: "p-1 rounded-md",
+    sm: "p-1.5 rounded-lg",
+    md: "p-2 rounded-lg",
+    lg: "p-2.5 rounded-lg",
+};
+
 /**
  * Ref-forwarding matters: Headless UI renders triggers with `as={Fragment}` and
  * hands the child a ref for focus management and popover positioning.
@@ -62,7 +69,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
                 "inline-flex items-center justify-center font-medium transition-colors",
                 "disabled:cursor-not-allowed disabled:opacity-50",
                 variantClasses[variant],
-                sizeClasses[size],
+                icon && children == null
+                    ? iconOnlySizeClasses[size]
+                    : sizeClasses[size],
                 fullWidth && "w-full",
                 className
             )}

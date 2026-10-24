@@ -357,11 +357,12 @@ const EmailsPage: React.FC = () => {
         emails.every((email) => checkedUids.has(email.uid));
 
     return (
-        <div className="flex h-[calc(100vh-4rem)] overflow-hidden rounded-xl border border-line bg-surface">
-            <aside className="hidden w-56 shrink-0 flex-col border-r border-line p-3 lg:flex">
+        <div className="flex h-full overflow-hidden bg-surface">
+            <aside className="hidden w-48 shrink-0 flex-col border-r border-line p-2 lg:flex">
                 <Button
                     fullWidth
-                    className="mb-4"
+                    size="sm"
+                    className="mb-2"
                     onClick={() => openCompose()}
                     icon={<PencilSquareIcon className="h-4 w-4" />}
                 >
@@ -391,7 +392,7 @@ const EmailsPage: React.FC = () => {
 
             <section
                 className={clsx(
-                    "flex w-full shrink-0 flex-col border-r border-line md:w-80 xl:w-96",
+                    "flex w-full shrink-0 flex-col border-r border-line md:w-80 xl:w-88",
                     selectedUid && "hidden md:flex"
                 )}
             >
@@ -499,10 +500,10 @@ const EmailsPage: React.FC = () => {
                 )}
             >
                 {selectedUid && (
-                    <div className="border-b border-line px-4 py-2 md:hidden">
+                    <div className="border-b border-line px-2 py-1 md:hidden">
                         <Button
                             variant="ghost"
-                            size="sm"
+                            size="xs"
                             onClick={() => setParam({ uid: null })}
                         >
                             Back to list

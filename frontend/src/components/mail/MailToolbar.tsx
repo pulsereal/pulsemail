@@ -95,45 +95,16 @@ const MailToolbar: React.FC<MailToolbarProps> = ({
         }));
     }, [folders, currentFolder, onBulkMove]);
 
+    const selecting = selectedCount > 0;
+
     return (
-        <div className="shrink-0 border-b border-line px-4 py-3">
-            <div className="flex items-center justify-between gap-3">
-                <h2 className="truncate text-sm font-semibold text-content">
-                    {title}
-                    {typeof count === "number" && (
-                        <span className="ml-2 font-normal text-content-subtle">
-                            {count}
-                        </span>
-                    )}
-                </h2>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    aria-label="Refresh"
-                    loading={refreshing}
-                    onClick={onRefresh}
-                    icon={<ArrowPathIcon className="h-4 w-4" />}
-                />
-            </div>
-
-            <form
-                className="mt-3"
-                onSubmit={(event) => {
-                    event.preventDefault();
-                    onSearchSubmit();
-                }}
+        <div className="shrink-0 space-y-2 border-b border-line px-3 py-2">
+            <div
+                className={clsx(
+                    "-mx-1.5 flex h-7 items-center gap-1.5 rounded-md px-1.5",
+                    selecting && "bg-primary-50"
+                )}
             >
-                <Input
-                    type="search"
-                    value={search}
-                    onChange={(event) => onSearchChange(event.target.value)}
-                    placeholder="Search mail"
-                    aria-label="Search mail"
-                    icon={<MagnifyingGlassIcon className="h-4 w-4" />}
-                />
-            </form>
-
-            <div className="mt-3 flex items-center gap-2">
                 {onToggleSelectAll && (
                     <input
                         type="checkbox"
@@ -143,41 +114,58 @@ const MailToolbar: React.FC<MailToolbarProps> = ({
                         className="h-4 w-4 shrink-0 rounded border-line-strong text-primary-600 focus:ring-primary-500"
                     />
                 )}
-                <Select
-                    value={category}
-                    onChange={(event) => onCategoryChange(event.target.value)}
-                    options={CATEGORIES}
-                    aria-label="Filter by category"
-                    className="text-xs"
-                />
-                <Button
-                    variant={unreadOnly ? "primary" : "outline"}
-                    size="xs"
-                    className="shrink-0"
-                    onClick={() => onUnreadOnlyChange(!unreadOnly)}
-                >
-                    Unread
-                </Button>
-                {onPriorityOnlyChange && (
-                    <Button
-                        variant={priorityOnly ? "primary" : "outline"}
-                        size="xs"
-                        className="shrink-0"
-                        title="Show only mail the AI ranked as important"
-                        onClick={() => onPriorityOnlyChange(!priorityOnly)}
-                        icon={<BoltIcon className="h-3.5 w-3.5" />}
-                    >
-                        Priority
-                    </Button>
-                )}
-            </div>
 
-            {selectedCount > 0 && (
-                <div className="mt-3 flex items-center justify-between gap-2 rounded-lg bg-primary-50 px-2.5 py-1.5">
-                    <span className="shrink-0 text-xs font-medium text-primary-800">
+                {selecting ? (
+                    <span className="min-w-0 flex-1 truncate text-xs font-medium text-primary-800">
                         {selectedCount} selected
                     </span>
-                    <div className="flex items-center gap-1">
+                ) : (
+                    <>
+                        <h2 className="min-w-0 flex-1 truncate text-sm font-semibold text-content">
+                            {title}
+                            {typeof count === "number" && (
+                                <span className="ml-1.5 font-normal text-content-subtle">
+                                    {count}
+                                </span>
+                            )}
+                        </h2>
+                        <Button
+                            variant={unreadOnly ? "primary" : "outline"}
+                            size="xs"
+                            className="shrink-0"
+                            onClick={() => onUnreadOnlyChange(!unreadOnly)}
+                        >
+                            Unread
+                        </Button>
+                        {onPriorityOnlyChange && (
+                            <Button
+                                variant={priorityOnly ? "primary" : "outline"}
+                                size="xs"
+                                className="shrink-0"
+                                title="Show only mail the AI ranked as important"
+                                onClick={() =>
+                                    onPriorityOnlyChange(!priorityOnly)
+                                }
+                                icon={<BoltIcon className="h-3.5 w-3.5" />}
+                            >
+                                Priority
+                            </Button>
+                        )}
+                        <Button
+                            variant="ghost"
+                            size="xs"
+                            aria-label="Refresh"
+                            title="Refresh"
+                            className="shrink-0"
+                            loading={refreshing}
+                            onClick={onRefresh}
+                            icon={<ArrowPathIcon className="h-4 w-4" />}
+                        />
+                    </>
+                )}
+
+                {selecting && (
+                    <div className="flex shrink-0 items-center gap-0.5">
                         <Button
                             variant="ghost"
                             size="xs"
@@ -242,8 +230,39 @@ const MailToolbar: React.FC<MailToolbarProps> = ({
                             icon={<XMarkIcon className="h-3.5 w-3.5" />}
                         />
                     </div>
+                )}
+            </div>
+
+            <div className="flex items-center gap-1.5">
+                <form
+                    className="min-w-0 flex-1"
+                    onSubmit={(event) => {
+                        event.preventDefault();
+                        onSearchSubmit();
+                    }}
+                >
+                    <Input
+                        type="search"
+                        size="sm"
+                        value={search}
+                        onChange={(event) => onSearchChange(event.target.value)}
+                        placeholder="Search mail"
+                        aria-label="Search mail"
+                        icon={<MagnifyingGlassIcon className="h-4 w-4" />}
+                    />
+                </form>
+                <div className="w-36 shrink-0">
+                    <Select
+                        size="sm"
+                        value={category}
+                        onChange={(event) =>
+                            onCategoryChange(event.target.value)
+                        }
+                        options={CATEGORIES}
+                        aria-label="Filter by category"
+                    />
                 </div>
-            )}
+            </div>
         </div>
     );
 };
@@ -264,7 +283,7 @@ export const MailPager: React.FC<{
     if (!hasPrevious && !hasNext) return null;
 
     return (
-        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-line px-4 py-2">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-line px-3 py-1.5">
             <span className={clsx("text-xs text-content-subtle")}>
                 {shown === 0
                     ? "No messages"

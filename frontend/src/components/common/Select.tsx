@@ -1,16 +1,38 @@
 import React, { forwardRef, useId } from "react";
 import clsx from "clsx";
-import { fieldClasses } from "./Input";
+import { fieldClasses, fieldLabelClasses, type FieldSize } from "./Input";
 
-interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+interface SelectProps extends Omit<
+    React.SelectHTMLAttributes<HTMLSelectElement>,
+    "size"
+> {
     label?: string;
     error?: string;
     helpText?: string;
     options: { value: string; label: string; disabled?: boolean }[];
+    size?: FieldSize;
 }
 
+const selectSizeClasses: Record<FieldSize, string> = {
+    xs: "py-1 pl-2 pr-7",
+    sm: "py-1.5 pl-2.5 pr-8",
+    md: "py-2 pl-3 pr-9",
+};
+
 const Select = forwardRef<HTMLSelectElement, SelectProps>(
-    ({ label, error, helpText, options, className, id, ...props }, ref) => {
+    (
+        {
+            label,
+            error,
+            helpText,
+            options,
+            size = "md",
+            className,
+            id,
+            ...props
+        },
+        ref
+    ) => {
         const generatedId = useId();
         const selectId = id || generatedId;
 
@@ -19,7 +41,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
                 {label && (
                     <label
                         htmlFor={selectId}
-                        className="mb-1.5 block text-sm font-medium text-content"
+                        className={fieldLabelClasses(size)}
                     >
                         {label}
                     </label>
@@ -29,8 +51,8 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
                     id={selectId}
                     aria-invalid={error ? true : undefined}
                     className={clsx(
-                        fieldClasses(Boolean(error)),
-                        "py-2 pl-3 pr-9",
+                        fieldClasses(Boolean(error), size),
+                        selectSizeClasses[size],
                         className
                     )}
                     {...props}

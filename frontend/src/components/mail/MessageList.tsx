@@ -8,7 +8,7 @@ import EmptyState from "../common/EmptyState";
 import ErrorState from "../common/ErrorState";
 import { SkeletonList } from "../common/Skeleton";
 
-const ROW_HEIGHT = 92;
+const ROW_HEIGHT = 56;
 
 interface MessageListProps {
     emails: EmailSummary[];
@@ -71,7 +71,7 @@ const MessageList: React.FC<MessageListProps> = ({
     }
 
     if (loading && emails.length === 0) {
-        return <SkeletonList rows={6} className="p-4" />;
+        return <SkeletonList rows={10} className="p-3" />;
     }
 
     if (emails.length === 0) {

@@ -184,72 +184,14 @@
     }
 }
 
-/* Sanitized message bodies rendered in the reading pane */
+/* Plain-text message bodies; HTML mail renders isolated in EmailFrame */
 .email-content {
     @apply text-sm leading-relaxed text-content;
     word-break: break-word;
 }
 
-.email-content h1,
-.email-content h2,
-.email-content h3,
-.email-content h4 {
-    @apply mb-3 mt-5 font-semibold text-content;
-}
-
-.email-content h1 {
-    @apply text-xl;
-}
-.email-content h2 {
-    @apply text-lg;
-}
-.email-content h3 {
-    @apply text-base;
-}
-
 .email-content p {
-    @apply mb-3 text-content-muted;
-}
-
-.email-content a {
-    @apply text-primary-600 underline underline-offset-2 hover:text-primary-500;
-}
-
-.email-content blockquote {
-    @apply my-3 border-l-2 border-line-strong pl-4 italic text-content-subtle;
-}
-
-.email-content pre {
-    @apply my-3 overflow-x-auto rounded-lg bg-surface-sunken p-3 text-xs;
-}
-
-.email-content code {
-    @apply rounded bg-surface-sunken px-1 py-0.5 text-xs;
-}
-
-.email-content ul {
-    @apply mb-3 list-inside list-disc space-y-1 text-content-muted;
-}
-
-.email-content ol {
-    @apply mb-3 list-inside list-decimal space-y-1 text-content-muted;
-}
-
-.email-content img {
-    @apply h-auto max-w-full rounded-lg;
-}
-
-.email-content table {
-    @apply my-3 w-full border-collapse text-sm;
-}
-
-.email-content th,
-.email-content td {
-    @apply border border-line px-3 py-2 text-left;
-}
-
-.email-content th {
-    @apply bg-surface-sunken font-semibold;
+    @apply mb-2 text-content-muted;
 }
 
 /* Quill needs explicit theming; it ships light-only styles */

@@ -16,7 +16,7 @@ import { formatBytes } from "../../utils/mail";
 import type { Identity } from "../../types";
 import Drawer from "../common/Drawer";
 import Button from "../common/Button";
-import Input from "../common/Input";
+import Input, { fieldLabelClasses } from "../common/Input";
 import Select from "../common/Select";
 import Badge from "../common/Badge";
 import RichTextEditor from "./RichTextEditor";
@@ -260,10 +260,11 @@ const ComposeDrawer: React.FC = () => {
                 </div>
             }
         >
-            <div className="space-y-4">
+            <div className="space-y-3">
                 {identityOptions.length > 1 && (
                     <Select
                         label="From"
+                        size="sm"
                         value={draft.fromAddress || mailbox}
                         onChange={(event) => chooseIdentity(event.target.value)}
                         options={identityOptions}
@@ -274,6 +275,7 @@ const ComposeDrawer: React.FC = () => {
                     <Input
                         label="To"
                         type="text"
+                        size="sm"
                         value={draft.to}
                         onChange={(event) =>
                             updateDraft({ to: event.target.value })
@@ -284,7 +286,7 @@ const ComposeDrawer: React.FC = () => {
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="mb-1"
+                            className="mb-px shrink-0"
                             onClick={() => setShowCc(true)}
                         >
                             Cc / Bcc
@@ -293,10 +295,11 @@ const ComposeDrawer: React.FC = () => {
                 </div>
 
                 {showCc && (
-                    <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-3 sm:grid-cols-2">
                         <Input
                             label="Cc"
                             type="text"
+                            size="sm"
                             value={draft.cc}
                             onChange={(event) =>
                                 updateDraft({ cc: event.target.value })
@@ -305,6 +308,7 @@ const ComposeDrawer: React.FC = () => {
                         <Input
                             label="Bcc"
                             type="text"
+                            size="sm"
                             value={draft.bcc}
                             onChange={(event) =>
                                 updateDraft({ bcc: event.target.value })
@@ -315,6 +319,7 @@ const ComposeDrawer: React.FC = () => {
 
                 <Input
                     label="Subject"
+                    size="sm"
                     value={draft.subject}
                     onChange={(event) =>
                         updateDraft({ subject: event.target.value })
@@ -322,9 +327,7 @@ const ComposeDrawer: React.FC = () => {
                 />
 
                 <div>
-                    <span className="mb-1.5 block text-sm font-medium text-content">
-                        Message
-                    </span>
+                    <span className={fieldLabelClasses("sm")}>Message</span>
                     <RichTextEditor
                         value={draft.content}
                         onChange={(content) => updateDraft({ content })}
@@ -333,7 +336,7 @@ const ComposeDrawer: React.FC = () => {
                 </div>
 
                 {spam && (
-                    <div className="rounded-lg border border-line bg-surface-sunken p-3">
+                    <div className="rounded-md border border-line bg-surface-sunken px-3 py-2">
                         <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-content">
                                 Spam score
@@ -351,7 +354,7 @@ const ComposeDrawer: React.FC = () => {
                             </Badge>
                         </div>
                         {spam.recommendation && (
-                            <p className="mt-1.5 text-sm text-content-muted">
+                            <p className="mt-1 text-sm text-content-muted">
                                 {spam.recommendation}
                             </p>
                         )}
@@ -359,7 +362,7 @@ const ComposeDrawer: React.FC = () => {
                 )}
 
                 <div>
-                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-line-strong px-3 py-2 text-sm text-content-muted transition-colors hover:border-primary-400 hover:text-content">
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-dashed border-line-strong px-2.5 py-1.5 text-sm text-content-muted transition-colors hover:border-primary-400 hover:text-content">
                         <PaperClipIcon className="h-4 w-4" />
                         Attach files
                         <input
@@ -371,11 +374,11 @@ const ComposeDrawer: React.FC = () => {
                     </label>
 
                     {attachments.length > 0 && (
-                        <ul className="mt-3 space-y-2">
+                        <ul className="mt-2 space-y-1">
                             {attachments.map((file, index) => (
                                 <li
                                     key={`${file.name}-${index}`}
-                                    className="flex items-center justify-between gap-3 rounded-lg border border-line bg-surface-sunken px-3 py-2 text-sm"
+                                    className="flex items-center justify-between gap-3 rounded-md border border-line bg-surface-sunken px-2.5 py-1.5 text-sm"
                                 >
                                     <span className="min-w-0 truncate text-content">
                                         {file.name}

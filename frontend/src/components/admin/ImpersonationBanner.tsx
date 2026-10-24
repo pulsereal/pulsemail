@@ -18,7 +18,7 @@ const ImpersonationBanner: React.FC = () => {
     if (!isImpersonating) return null;
 
     return (
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-warning-300 bg-warning-100 px-4 py-2 text-warning-800 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-warning-300 bg-warning-100 px-3 py-1.5 text-warning-800 sm:px-4">
             <p className="flex items-center gap-2 text-sm">
                 <ExclamationTriangleIcon className="h-4 w-4 shrink-0" />
                 <span>
@@ -33,7 +33,7 @@ const ImpersonationBanner: React.FC = () => {
                     resetActiveMailbox();
                     queryClient.clear();
                 }}
-                className="rounded-md border border-warning-400 px-2.5 py-1 text-xs font-medium transition-colors hover:bg-warning-200"
+                className="rounded-md border border-warning-400 px-2 py-0.5 text-xs font-medium transition-colors hover:bg-warning-200"
             >
                 Return to my mailbox
             </button>

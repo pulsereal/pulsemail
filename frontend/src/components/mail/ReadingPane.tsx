@@ -40,6 +40,7 @@ import EmptyState from "../common/EmptyState";
 import ErrorState from "../common/ErrorState";
 import LoadingSpinner from "../LoadingSpinner";
 import Tooltip from "../common/Tooltip";
+import EmailFrame from "./EmailFrame";
 
 interface ReadingPaneProps {
     email?: EmailDetail | null;
@@ -159,32 +160,30 @@ const ReadingPane: React.FC<ReadingPaneProps> = ({
 
     return (
         <article className="flex h-full flex-col">
-            <header className="shrink-0 border-b border-line px-6 py-4">
-                <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                        <h2 className="text-lg font-semibold leading-snug text-content">
+            <header className="shrink-0 border-b border-line px-4 py-3">
+                <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 pt-0.5">
+                        <h2 className="min-w-0 break-words text-base font-semibold leading-snug text-content">
                             {email.subject}
                         </h2>
-                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                            {mailboxLabel && (
-                                <Badge variant="info" size="xs">
-                                    {mailboxLabel}
-                                </Badge>
-                            )}
-                            {draft && (
-                                <Badge variant="warning" size="xs">
-                                    Draft
-                                </Badge>
-                            )}
-                            {inJunk && (
-                                <Badge variant="danger" size="xs">
-                                    Junk
-                                </Badge>
-                            )}
-                        </div>
+                        {mailboxLabel && (
+                            <Badge variant="info" size="xs">
+                                {mailboxLabel}
+                            </Badge>
+                        )}
+                        {draft && (
+                            <Badge variant="warning" size="xs">
+                                Draft
+                            </Badge>
+                        )}
+                        {inJunk && (
+                            <Badge variant="danger" size="xs">
+                                Junk
+                            </Badge>
+                        )}
                     </div>
 
-                    <div className="flex shrink-0 items-center gap-1">
+                    <div className="flex shrink-0 items-center gap-0.5">
                         {onToggleFlag && (
                             <Tooltip label={flagged ? "Remove star" : "Star"}>
                                 <Button
@@ -267,35 +266,35 @@ const ReadingPane: React.FC<ReadingPaneProps> = ({
                     </div>
                 </div>
 
-                <div className="mt-4 flex items-start gap-3">
+                <div className="mt-2.5 flex items-center gap-2.5">
                     <span
                         className={clsx(
-                            "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
+                            "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
                             avatarTone(senderName)
                         )}
                     >
                         {initialsFor(senderName)}
                     </span>
-                    <div className="min-w-0 flex-1 text-sm">
-                        <p className="truncate font-medium text-content">
+                    <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium leading-5 text-content">
                             {senderName}
                         </p>
-                        <p className="truncate text-content-subtle">
+                        <p className="truncate text-xs text-content-subtle">
                             to{" "}
                             {addressText(email.to) || "undisclosed recipients"}
                             {email.cc && ` · cc ${addressText(email.cc)}`}
                         </p>
                     </div>
-                    <time className="shrink-0 text-xs text-content-subtle">
+                    <time className="shrink-0 self-start pt-0.5 text-xs text-content-subtle">
                         {formatFullDate(email.date)}
                     </time>
                 </div>
 
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="mt-2.5 flex flex-wrap gap-1.5">
                     {draft && onEditDraft ? (
                         <Button
-                            size="sm"
-                            icon={<PencilSquareIcon className="h-4 w-4" />}
+                            size="xs"
+                            icon={<PencilSquareIcon className="h-3.5 w-3.5" />}
                             onClick={() => onEditDraft(email)}
                         >
                             Continue editing
@@ -303,10 +302,10 @@ const ReadingPane: React.FC<ReadingPaneProps> = ({
                     ) : (
                         <>
                             <Button
-                                size="sm"
+                                size="xs"
                                 variant="outline"
                                 icon={
-                                    <ArrowUturnLeftIcon className="h-4 w-4" />
+                                    <ArrowUturnLeftIcon className="h-3.5 w-3.5" />
                                 }
                                 onClick={() => onReply(email)}
                             >
@@ -314,19 +313,19 @@ const ReadingPane: React.FC<ReadingPaneProps> = ({
                             </Button>
                             {onReplyAll && (
                                 <Button
-                                    size="sm"
+                                    size="xs"
                                     variant="outline"
-                                    icon={<UsersIcon className="h-4 w-4" />}
+                                    icon={<UsersIcon className="h-3.5 w-3.5" />}
                                     onClick={() => onReplyAll(email)}
                                 >
                                     Reply all
                                 </Button>
                             )}
                             <Button
-                                size="sm"
+                                size="xs"
                                 variant="outline"
                                 icon={
-                                    <ArrowUturnRightIcon className="h-4 w-4" />
+                                    <ArrowUturnRightIcon className="h-3.5 w-3.5" />
                                 }
                                 onClick={() => onForward(email)}
                             >
@@ -337,23 +336,23 @@ const ReadingPane: React.FC<ReadingPaneProps> = ({
                 </div>
             </header>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 scrollbar-thin">
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 scrollbar-thin">
                 {email.summary && (
-                    <div className="mb-5 rounded-lg border border-primary-200 bg-primary-50 p-3">
+                    <div className="mb-3 rounded-md border border-primary-200 bg-primary-50 px-3 py-2">
                         <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-primary-700">
                             <SparklesIcon className="h-3.5 w-3.5" />
                             Summary
                         </p>
-                        <p className="mt-1 text-sm text-primary-900">
+                        <p className="mt-0.5 text-sm text-primary-900">
                             {email.summary}
                         </p>
                     </div>
                 )}
 
                 {body.hasBlockedRemoteContent && (
-                    <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning-300 bg-warning-50 px-3 py-2">
-                        <p className="flex items-center gap-2 text-sm text-warning-800">
-                            <EyeIcon className="h-4 w-4 shrink-0" />
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-warning-300 bg-warning-50 px-3 py-1.5">
+                        <p className="flex items-center gap-1.5 text-xs text-warning-800">
+                            <EyeIcon className="h-3.5 w-3.5 shrink-0" />
                             Remote images are blocked to prevent tracking.
                         </p>
                         <Button
@@ -366,19 +365,23 @@ const ReadingPane: React.FC<ReadingPaneProps> = ({
                     </div>
                 )}
 
-                <div
-                    className="email-content"
-                    dangerouslySetInnerHTML={{ __html: body.html }}
-                />
+                {email.html ? (
+                    <EmailFrame html={body.html} />
+                ) : (
+                    <div
+                        className="email-content"
+                        dangerouslySetInnerHTML={{ __html: body.html }}
+                    />
+                )}
 
                 {email.attachments.length > 0 && (
-                    <div className="mt-6 border-t border-line pt-4">
-                        <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-content-subtle">
+                    <div className="mt-4 border-t border-line pt-3">
+                        <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-content-subtle">
                             <PaperClipIcon className="h-3.5 w-3.5" />
                             {email.attachments.length} attachment
                             {email.attachments.length === 1 ? "" : "s"}
                         </p>
-                        <ul className="flex flex-wrap gap-2">
+                        <ul className="flex flex-wrap gap-1.5">
                             {email.attachments.map((attachment, index) => (
                                 <li key={`${attachment.filename}-${index}`}>
                                     <button
@@ -387,18 +390,18 @@ const ReadingPane: React.FC<ReadingPaneProps> = ({
                                         onClick={() =>
                                             onDownloadAttachment?.(email, index)
                                         }
-                                        className="flex items-center gap-2 rounded-lg border border-line bg-surface-sunken px-3 py-2 text-sm transition-colors enabled:hover:border-primary-400 enabled:hover:bg-surface-hover disabled:cursor-default"
+                                        className="flex items-center gap-1.5 rounded-md border border-line bg-surface-sunken px-2.5 py-1 text-xs transition-colors enabled:hover:border-primary-400 enabled:hover:bg-surface-hover disabled:cursor-default"
                                     >
-                                        <PaperClipIcon className="h-4 w-4 text-content-subtle" />
+                                        <PaperClipIcon className="h-3.5 w-3.5 text-content-subtle" />
                                         <span className="max-w-[16rem] truncate text-content">
                                             {attachment.filename ||
                                                 "attachment"}
                                         </span>
-                                        <span className="text-xs text-content-subtle">
+                                        <span className="text-content-subtle">
                                             {formatBytes(attachment.size)}
                                         </span>
                                         {onDownloadAttachment && (
-                                            <ArrowDownTrayIcon className="h-4 w-4 text-content-subtle" />
+                                            <ArrowDownTrayIcon className="h-3.5 w-3.5 text-content-subtle" />
                                         )}
                                     </button>
                                 </li>
