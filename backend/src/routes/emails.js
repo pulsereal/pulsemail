@@ -15,6 +15,7 @@ const {
     ImportanceService,
     CATEGORIES,
 } = require("../services/ImportanceService");
+const { buildSearchCriteria } = require("../utils/imapSearch");
 const { query } = require("../config/database");
 const {
     authenticateToken,
@@ -74,12 +75,9 @@ router.get("/", scoped, async (req, res) => {
         let listingTotal = null;
 
         if (search) {
-            const searchCriteria = [
-                ["OR", ["SUBJECT", search], ["FROM", search], ["BODY", search]],
-            ];
             emails = await emailService.searchEmails(
                 email,
-                searchCriteria,
+                buildSearchCriteria({ query: search }),
                 folder
             );
         } else if (priority === "true") {
@@ -744,47 +742,16 @@ router.post("/search", scoped, async (req, res) => {
             category,
         } = req.body;
 
-        let searchCriteria = [];
-
-        // Build search criteria
-        if (searchQuery) {
-            searchCriteria.push([
-                "OR",
-                ["SUBJECT", searchQuery],
-                ["FROM", searchQuery],
-                ["BODY", searchQuery],
-            ]);
-        }
-
-        if (sender) {
-            searchCriteria.push(["FROM", sender]);
-        }
-
-        if (subject) {
-            searchCriteria.push(["SUBJECT", subject]);
-        }
-
-        if (date_from) {
-            searchCriteria.push(["SINCE", new Date(date_from)]);
-        }
-
-        if (date_to) {
-            searchCriteria.push(["BEFORE", new Date(date_to)]);
-        }
-
-        if (has_attachments === true) {
-            searchCriteria.push(["HEADER", "CONTENT-TYPE", "MULTIPART"]);
-        }
-
-        // Combine all criteria with AND
-        const finalCriteria =
-            searchCriteria.length > 1
-                ? ["AND", ...searchCriteria]
-                : searchCriteria[0] || ["ALL"];
-
         let emails = await emailService.searchEmails(
             email,
-            finalCriteria,
+            buildSearchCriteria({
+                query: searchQuery,
+                sender,
+                subject,
+                dateFrom: date_from,
+                dateTo: date_to,
+                hasAttachments: has_attachments === true,
+            }),
             folder
         );
 
