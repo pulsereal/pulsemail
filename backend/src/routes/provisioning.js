@@ -11,12 +11,6 @@ const Alias = require("../models/Alias");
 const User = require("../models/User");
 const { SUPPORTED_SCHEMES } = require("../config/iredmail");
 
-const router = express.Router();
-
-const admin = [authenticateToken, requireAdmin];
-const globalAdmin = [authenticateToken, requireGlobalAdmin];
-const scopedAdmin = [authenticateToken, requireAdmin, requireDomainAccess];
-
 /**
  * Domains a request may act on. Global admins get `null`, meaning unscoped;
  * domain admins get their explicit list, which the models turn into an
@@ -30,9 +24,9 @@ const domainScope = (req) =>
 // service logs to identify. These routes are admin-only, so naming the table
 // and the privilege is safe and saves that trip.
 const SCHEMA_ERRORS = {
-    "42501": "the database refused the operation",
+    42501: "the database refused the operation",
     "42P01": "a table the operation needs is missing",
-    "42703": "a column the operation needs is missing",
+    42703: "a column the operation needs is missing",
 };
 
 const handle = (fn) => async (req, res) => {
@@ -58,339 +52,428 @@ const handle = (fn) => async (req, res) => {
     }
 };
 
-// Domains -------------------------------------------------------------------
+/** Who to record as having made a change: the admin, or `agent:<id>`. */
+const actorOf = (req) => (req.agent ? `agent:${req.agent.id}` : req.user.email);
 
-router.get(
-    "/domains",
-    admin,
-    handle(async (req, res) => {
-        const domains = await Domain.list({
-            domains: domainScope(req),
-            search: req.query.search || "",
+const isGlobal = (req) => req.adminInfo.adminType === "global";
+
+/**
+ * Only a global admin may hand out global admin, otherwise a domain admin
+ * could create a mailbox in their own domain and promote it past themselves.
+ * An agent additionally needs its own "admins" permission.
+ */
+const mayGrantGlobal = (req) =>
+    isGlobal(req) &&
+    (!req.agent || (req.agent.permissions || []).includes("admins"));
+
+const guardGlobalGrant = (req, res, next) => {
+    if (mayGrantGlobal(req) || !req.body || !("isGlobalAdmin" in req.body)) {
+        return next();
+    }
+    if (req.body.isGlobalAdmin) {
+        return res.status(403).json({
+            error: "Only a global admin can grant global admin rights",
         });
-        res.json({ success: true, domains });
-    })
-);
+    }
+    delete req.body.isGlobalAdmin;
+    next();
+};
 
-router.post(
-    "/domains",
-    globalAdmin,
-    handle(async (req, res) => {
-        const domain = await Domain.create(req.body);
-        res.status(201).json({ success: true, domain });
-    })
-);
+/**
+ * A global admin's mailbox can live inside a domain that a domain admin
+ * manages. Resetting its password, redirecting its mail or deleting it would
+ * hand that domain admin the global account, so only a global admin may.
+ */
+const guardPrivilegedMailbox = async (req, res, next) => {
+    try {
+        if (isGlobal(req)) return next();
 
-router.get(
-    "/domains/:domain",
-    scopedAdmin,
-    handle(async (req, res) => {
-        const domain = await Domain.findByName(req.params.domain);
-        if (!domain) {
-            return res.status(404).json({ error: "Domain not found" });
-        }
-
-        const [usage, admins, aliasDomains, catchAll] = await Promise.all([
-            Domain.usage(req.params.domain),
-            Domain.listAdmins(req.params.domain),
-            Domain.listAliasDomains(req.params.domain),
-            Domain.getCatchAll(req.params.domain),
+        const email = req.params.email;
+        const [target, targetAdmin] = await Promise.all([
+            Mailbox.findByEmail(email),
+            User.isAdmin(email),
         ]);
 
-        res.json({
-            success: true,
-            domain: { ...domain, usage, admins, aliasDomains, catchAll },
-        });
-    })
-);
-
-router.put(
-    "/domains/:domain",
-    scopedAdmin,
-    handle(async (req, res) => {
-        const domain = await Domain.update(req.params.domain, req.body);
-        res.json({ success: true, domain });
-    })
-);
-
-router.delete(
-    "/domains/:domain",
-    globalAdmin,
-    handle(async (req, res) => {
-        await Domain.remove(req.params.domain);
-        res.json({ success: true });
-    })
-);
-
-router.get(
-    "/domains/:domain/admins",
-    scopedAdmin,
-    handle(async (req, res) => {
-        const admins = await Domain.listAdmins(req.params.domain);
-        res.json({ success: true, admins });
-    })
-);
-
-router.post(
-    "/domains/:domain/admins",
-    scopedAdmin,
-    handle(async (req, res) => {
-        const { email } = req.body;
-        if (!email) {
-            return res.status(400).json({ error: "email is required" });
-        }
-
-        const target = await User.findByEmail(email);
-        if (!target) {
-            return res
-                .status(404)
-                .json({ error: "That mailbox does not exist" });
-        }
-
-        await Domain.addAdmin(req.params.domain, email);
-        res.status(201).json({ success: true });
-    })
-);
-
-router.delete(
-    "/domains/:domain/admins/:email",
-    scopedAdmin,
-    handle(async (req, res) => {
-        await Domain.removeAdmin(req.params.domain, req.params.email);
-        res.json({ success: true });
-    })
-);
-
-router.post(
-    "/domains/:domain/alias-domains",
-    scopedAdmin,
-    handle(async (req, res) => {
-        await Domain.addAliasDomain(req.params.domain, req.body.aliasDomain);
-        const aliasDomains = await Domain.listAliasDomains(req.params.domain);
-        res.status(201).json({ success: true, aliasDomains });
-    })
-);
-
-router.delete(
-    "/domains/:domain/alias-domains/:aliasDomain",
-    scopedAdmin,
-    handle(async (req, res) => {
-        await Domain.removeAliasDomain(req.params.aliasDomain);
-        res.json({ success: true });
-    })
-);
-
-router.put(
-    "/domains/:domain/catch-all",
-    scopedAdmin,
-    handle(async (req, res) => {
-        const destinations = Array.isArray(req.body.destinations)
-            ? req.body.destinations
-            : [];
-        await Domain.setCatchAll(req.params.domain, destinations);
-        res.json({ success: true, catchAll: destinations });
-    })
-);
-
-// Mailboxes -----------------------------------------------------------------
-
-router.get(
-    "/mailboxes",
-    admin,
-    handle(async (req, res) => {
-        const { rows, total } = await Mailbox.list({
-            domains: domainScope(req),
-            search: req.query.search || "",
-            limit: Math.min(parseInt(req.query.limit, 10) || 50, 200),
-            offset: parseInt(req.query.offset, 10) || 0,
-        });
-
-        res.json({ success: true, mailboxes: rows, total });
-    })
-);
-
-router.post(
-    "/mailboxes",
-    scopedAdmin,
-    handle(async (req, res) => {
-        const mailbox = await Mailbox.create(req.body);
-        res.status(201).json({ success: true, mailbox });
-    })
-);
-
-router.get(
-    "/mailboxes/:email",
-    scopedAdmin,
-    handle(async (req, res) => {
-        const mailbox = await Mailbox.findByEmail(req.params.email);
-        if (!mailbox) {
-            return res.status(404).json({ error: "Mailbox not found" });
-        }
-
-        const [forwardings, aliases, bcc, lastLogin] = await Promise.all([
-            Mailbox.getForwardings(req.params.email),
-            Mailbox.getAliasAddresses(req.params.email),
-            Mailbox.getBcc(req.params.email),
-            User.getLastLogin(req.params.email),
-        ]);
-
-        res.json({
-            success: true,
-            mailbox: { ...mailbox, forwardings, aliases, bcc, lastLogin },
-        });
-    })
-);
-
-router.put(
-    "/mailboxes/:email",
-    scopedAdmin,
-    handle(async (req, res) => {
-        const mailbox = await Mailbox.update(req.params.email, req.body);
-        res.json({ success: true, mailbox });
-    })
-);
-
-router.delete(
-    "/mailboxes/:email",
-    scopedAdmin,
-    handle(async (req, res) => {
-        if (req.params.email === req.user.email) {
-            return res
-                .status(400)
-                .json({ error: "You cannot delete your own mailbox" });
-        }
-
-        const result = await Mailbox.remove(req.params.email, {
-            deletedBy: req.user.email,
-            keepMaildirDays: parseInt(
-                process.env.DELETED_MAILDIR_KEEP_DAYS || "7",
-                10
-            ),
-        });
-
-        res.json({ success: true, ...result });
-    })
-);
-
-router.put(
-    "/mailboxes/:email/password",
-    scopedAdmin,
-    handle(async (req, res) => {
-        const { password, scheme } = req.body;
-
-        if (!password || password.length < 8) {
-            return res
-                .status(400)
-                .json({ error: "Password must be at least 8 characters" });
-        }
-        if (scheme && !SUPPORTED_SCHEMES.includes(String(scheme).toUpperCase())) {
-            return res.status(400).json({
-                error: `Unsupported scheme. Use one of: ${SUPPORTED_SCHEMES.join(", ")}`,
+        if (target?.isGlobalAdmin || targetAdmin.adminType === "global") {
+            return res.status(403).json({
+                error: "Only a global admin can change a global admin's mailbox",
             });
         }
+        next();
+    } catch (error) {
+        console.error("Privileged mailbox check failed:", error);
+        res.status(500).json({ error: "Request failed" });
+    }
+};
 
-        await User.changePassword(req.params.email, password, scheme);
-        res.json({ success: true });
-    })
-);
-
-router.get(
-    "/mailboxes/:email/forwardings",
-    scopedAdmin,
-    handle(async (req, res) => {
-        const forwardings = await Mailbox.getForwardings(req.params.email);
-        res.json({ success: true, forwardings });
-    })
-);
-
-router.put(
-    "/mailboxes/:email/forwardings",
-    scopedAdmin,
-    handle(async (req, res) => {
-        const forwardings = await Mailbox.setForwardings(
-            req.params.email,
-            req.body.destinations || [],
-            req.body.keepCopy !== false
-        );
-        res.json({ success: true, forwardings });
-    })
-);
-
-router.put(
-    "/mailboxes/:email/aliases",
-    scopedAdmin,
-    handle(async (req, res) => {
-        const aliases = await Mailbox.setAliasAddresses(
-            req.params.email,
-            req.body.addresses || []
-        );
-        res.json({ success: true, aliases });
-    })
-);
-
-router.put(
-    "/mailboxes/:email/bcc",
-    scopedAdmin,
-    handle(async (req, res) => {
-        const bcc = await Mailbox.setBcc(req.params.email, {
-            sender: req.body.sender,
-            recipient: req.body.recipient,
-        });
-        res.json({ success: true, bcc });
-    })
-);
-
-// Standalone aliases --------------------------------------------------------
-
-router.get(
-    "/aliases",
+/**
+ * The same routes serve the admin panel and the agent API. Each caller
+ * supplies guards that leave `req.adminInfo` describing what it may touch:
+ *   admin        any admin, results filtered to `req.adminInfo.domains`
+ *   globalAdmin  creating and deleting whole domains
+ *   scopedAdmin  acting on one domain, or an address inside it
+ *   grantAdmins  adding or removing domain administrators
+ */
+const buildProvisioningRouter = ({
     admin,
-    handle(async (req, res) => {
-        const aliases = await Alias.list({
-            domains: domainScope(req),
-            search: req.query.search || "",
-        });
-        res.json({ success: true, aliases });
-    })
-);
-
-router.post(
-    "/aliases",
+    globalAdmin,
     scopedAdmin,
-    handle(async (req, res) => {
-        const alias = await Alias.create(req.body);
-        res.status(201).json({ success: true, alias });
-    })
-);
+    grantAdmins = scopedAdmin,
+}) => {
+    const router = express.Router();
+    const managedMailbox = [...scopedAdmin, guardPrivilegedMailbox];
 
-router.get(
-    "/aliases/:address",
-    scopedAdmin,
-    handle(async (req, res) => {
-        const alias = await Alias.findByAddress(req.params.address);
-        if (!alias) {
-            return res.status(404).json({ error: "Alias not found" });
-        }
-        res.json({ success: true, alias });
-    })
-);
+    // Domains -------------------------------------------------------------------
 
-router.put(
-    "/aliases/:address",
-    scopedAdmin,
-    handle(async (req, res) => {
-        const alias = await Alias.update(req.params.address, req.body);
-        res.json({ success: true, alias });
-    })
-);
+    router.get(
+        "/domains",
+        admin,
+        handle(async (req, res) => {
+            const domains = await Domain.list({
+                domains: domainScope(req),
+                search: req.query.search || "",
+            });
+            res.json({ success: true, domains });
+        })
+    );
 
-router.delete(
-    "/aliases/:address",
-    scopedAdmin,
-    handle(async (req, res) => {
-        await Alias.remove(req.params.address);
-        res.json({ success: true });
-    })
-);
+    router.post(
+        "/domains",
+        globalAdmin,
+        handle(async (req, res) => {
+            const domain = await Domain.create(req.body);
+            res.status(201).json({ success: true, domain });
+        })
+    );
 
-module.exports = router;
+    router.get(
+        "/domains/:domain",
+        scopedAdmin,
+        handle(async (req, res) => {
+            const domain = await Domain.findByName(req.params.domain);
+            if (!domain) {
+                return res.status(404).json({ error: "Domain not found" });
+            }
+
+            const [usage, admins, aliasDomains, catchAll] = await Promise.all([
+                Domain.usage(req.params.domain),
+                Domain.listAdmins(req.params.domain),
+                Domain.listAliasDomains(req.params.domain),
+                Domain.getCatchAll(req.params.domain),
+            ]);
+
+            res.json({
+                success: true,
+                domain: { ...domain, usage, admins, aliasDomains, catchAll },
+            });
+        })
+    );
+
+    router.put(
+        "/domains/:domain",
+        scopedAdmin,
+        handle(async (req, res) => {
+            const domain = await Domain.update(req.params.domain, req.body);
+            res.json({ success: true, domain });
+        })
+    );
+
+    router.delete(
+        "/domains/:domain",
+        globalAdmin,
+        handle(async (req, res) => {
+            await Domain.remove(req.params.domain);
+            res.json({ success: true });
+        })
+    );
+
+    router.get(
+        "/domains/:domain/admins",
+        scopedAdmin,
+        handle(async (req, res) => {
+            const admins = await Domain.listAdmins(req.params.domain);
+            res.json({ success: true, admins });
+        })
+    );
+
+    router.post(
+        "/domains/:domain/admins",
+        grantAdmins,
+        handle(async (req, res) => {
+            const { email } = req.body;
+            if (!email) {
+                return res.status(400).json({ error: "email is required" });
+            }
+
+            const target = await User.findByEmail(email);
+            if (!target) {
+                return res
+                    .status(404)
+                    .json({ error: "That mailbox does not exist" });
+            }
+
+            await Domain.addAdmin(req.params.domain, email);
+            res.status(201).json({ success: true });
+        })
+    );
+
+    router.delete(
+        "/domains/:domain/admins/:email",
+        grantAdmins,
+        handle(async (req, res) => {
+            await Domain.removeAdmin(req.params.domain, req.params.email);
+            res.json({ success: true });
+        })
+    );
+
+    router.post(
+        "/domains/:domain/alias-domains",
+        scopedAdmin,
+        handle(async (req, res) => {
+            await Domain.addAliasDomain(
+                req.params.domain,
+                req.body.aliasDomain
+            );
+            const aliasDomains = await Domain.listAliasDomains(
+                req.params.domain
+            );
+            res.status(201).json({ success: true, aliasDomains });
+        })
+    );
+
+    router.delete(
+        "/domains/:domain/alias-domains/:aliasDomain",
+        scopedAdmin,
+        handle(async (req, res) => {
+            await Domain.removeAliasDomain(req.params.aliasDomain);
+            res.json({ success: true });
+        })
+    );
+
+    router.put(
+        "/domains/:domain/catch-all",
+        scopedAdmin,
+        handle(async (req, res) => {
+            const destinations = Array.isArray(req.body.destinations)
+                ? req.body.destinations
+                : [];
+            await Domain.setCatchAll(req.params.domain, destinations);
+            res.json({ success: true, catchAll: destinations });
+        })
+    );
+
+    // Mailboxes -----------------------------------------------------------------
+
+    router.get(
+        "/mailboxes",
+        admin,
+        handle(async (req, res) => {
+            const { rows, total } = await Mailbox.list({
+                domains: domainScope(req),
+                search: req.query.search || "",
+                limit: Math.min(parseInt(req.query.limit, 10) || 50, 200),
+                offset: parseInt(req.query.offset, 10) || 0,
+            });
+
+            res.json({ success: true, mailboxes: rows, total });
+        })
+    );
+
+    router.post(
+        "/mailboxes",
+        scopedAdmin,
+        guardGlobalGrant,
+        handle(async (req, res) => {
+            const mailbox = await Mailbox.create(req.body);
+            res.status(201).json({ success: true, mailbox });
+        })
+    );
+
+    router.get(
+        "/mailboxes/:email",
+        scopedAdmin,
+        handle(async (req, res) => {
+            const mailbox = await Mailbox.findByEmail(req.params.email);
+            if (!mailbox) {
+                return res.status(404).json({ error: "Mailbox not found" });
+            }
+
+            const [forwardings, aliases, bcc, lastLogin] = await Promise.all([
+                Mailbox.getForwardings(req.params.email),
+                Mailbox.getAliasAddresses(req.params.email),
+                Mailbox.getBcc(req.params.email),
+                User.getLastLogin(req.params.email),
+            ]);
+
+            res.json({
+                success: true,
+                mailbox: { ...mailbox, forwardings, aliases, bcc, lastLogin },
+            });
+        })
+    );
+
+    router.put(
+        "/mailboxes/:email",
+        managedMailbox,
+        guardGlobalGrant,
+        handle(async (req, res) => {
+            const mailbox = await Mailbox.update(req.params.email, req.body);
+            res.json({ success: true, mailbox });
+        })
+    );
+
+    router.delete(
+        "/mailboxes/:email",
+        managedMailbox,
+        handle(async (req, res) => {
+            if (req.params.email === req.user?.email) {
+                return res
+                    .status(400)
+                    .json({ error: "You cannot delete your own mailbox" });
+            }
+
+            const result = await Mailbox.remove(req.params.email, {
+                deletedBy: actorOf(req),
+                keepMaildirDays: parseInt(
+                    process.env.DELETED_MAILDIR_KEEP_DAYS || "7",
+                    10
+                ),
+            });
+
+            res.json({ success: true, ...result });
+        })
+    );
+
+    router.put(
+        "/mailboxes/:email/password",
+        managedMailbox,
+        handle(async (req, res) => {
+            const { password, scheme } = req.body;
+
+            if (!password || password.length < 8) {
+                return res
+                    .status(400)
+                    .json({ error: "Password must be at least 8 characters" });
+            }
+            if (
+                scheme &&
+                !SUPPORTED_SCHEMES.includes(String(scheme).toUpperCase())
+            ) {
+                return res.status(400).json({
+                    error: `Unsupported scheme. Use one of: ${SUPPORTED_SCHEMES.join(", ")}`,
+                });
+            }
+
+            await User.changePassword(req.params.email, password, scheme);
+            res.json({ success: true });
+        })
+    );
+
+    router.get(
+        "/mailboxes/:email/forwardings",
+        scopedAdmin,
+        handle(async (req, res) => {
+            const forwardings = await Mailbox.getForwardings(req.params.email);
+            res.json({ success: true, forwardings });
+        })
+    );
+
+    router.put(
+        "/mailboxes/:email/forwardings",
+        managedMailbox,
+        handle(async (req, res) => {
+            const forwardings = await Mailbox.setForwardings(
+                req.params.email,
+                req.body.destinations || [],
+                req.body.keepCopy !== false
+            );
+            res.json({ success: true, forwardings });
+        })
+    );
+
+    router.put(
+        "/mailboxes/:email/aliases",
+        managedMailbox,
+        handle(async (req, res) => {
+            const aliases = await Mailbox.setAliasAddresses(
+                req.params.email,
+                req.body.addresses || []
+            );
+            res.json({ success: true, aliases });
+        })
+    );
+
+    router.put(
+        "/mailboxes/:email/bcc",
+        managedMailbox,
+        handle(async (req, res) => {
+            const bcc = await Mailbox.setBcc(req.params.email, {
+                sender: req.body.sender,
+                recipient: req.body.recipient,
+            });
+            res.json({ success: true, bcc });
+        })
+    );
+
+    // Standalone aliases --------------------------------------------------------
+
+    router.get(
+        "/aliases",
+        admin,
+        handle(async (req, res) => {
+            const aliases = await Alias.list({
+                domains: domainScope(req),
+                search: req.query.search || "",
+            });
+            res.json({ success: true, aliases });
+        })
+    );
+
+    router.post(
+        "/aliases",
+        scopedAdmin,
+        handle(async (req, res) => {
+            const alias = await Alias.create(req.body);
+            res.status(201).json({ success: true, alias });
+        })
+    );
+
+    router.get(
+        "/aliases/:address",
+        scopedAdmin,
+        handle(async (req, res) => {
+            const alias = await Alias.findByAddress(req.params.address);
+            if (!alias) {
+                return res.status(404).json({ error: "Alias not found" });
+            }
+            res.json({ success: true, alias });
+        })
+    );
+
+    router.put(
+        "/aliases/:address",
+        scopedAdmin,
+        handle(async (req, res) => {
+            const alias = await Alias.update(req.params.address, req.body);
+            res.json({ success: true, alias });
+        })
+    );
+
+    router.delete(
+        "/aliases/:address",
+        scopedAdmin,
+        handle(async (req, res) => {
+            await Alias.remove(req.params.address);
+            res.json({ success: true });
+        })
+    );
+
+    return router;
+};
+
+module.exports = buildProvisioningRouter({
+    admin: [authenticateToken, requireAdmin],
+    globalAdmin: [authenticateToken, requireGlobalAdmin],
+    scopedAdmin: [authenticateToken, requireAdmin, requireDomainAccess],
+});
+module.exports.buildProvisioningRouter = buildProvisioningRouter;

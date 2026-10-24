@@ -28,7 +28,7 @@ class MockEmailService {
     }
 
     // Send email (mock)
-    async sendEmail(from, to, subject, content, attachments = []) {
+    async sendEmail(from, to, subject, content, attachments = [], options = {}) {
         try {
             if (!this.transporter) {
                 this.initializeTransporter();
@@ -37,8 +37,13 @@ class MockEmailService {
             const mailOptions = {
                 from,
                 to: Array.isArray(to) ? to.join(",") : to,
+                cc: options.cc,
+                bcc: options.bcc,
                 subject,
                 html: content,
+                text: options.text,
+                inReplyTo: options.inReplyTo,
+                references: options.references,
                 attachments,
             };
 
@@ -129,7 +134,25 @@ class MockEmailService {
         return {
             ...this.mockData.countEmails(userEmail, folder),
             uidvalidity: 1,
+            uidnext: this.#folderUids(userEmail, folder).reduce(
+                (max, uid) => Math.max(max, uid + 1),
+                1
+            ),
         };
+    }
+
+    #folderUids(userEmail, folder) {
+        return this.mockData
+            .readData("emails.json")
+            .filter((email) => email.to === userEmail && email.folder === folder)
+            .map((email) => Number(email.uid))
+            .filter(Number.isFinite);
+    }
+
+    async getUidsSince(userEmail, folder, afterUid) {
+        return this.#folderUids(userEmail, folder)
+            .filter((uid) => uid > afterUid)
+            .sort((a, b) => a - b);
     }
 
     async getEmailsByUids(userEmail, folder, uids) {

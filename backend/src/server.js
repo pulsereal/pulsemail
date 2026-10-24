@@ -25,8 +25,12 @@ const adminRoutes = require("./routes/admin");
 const provisioningRoutes = require("./routes/provisioning");
 const mailboxSettingsRoutes = require("./routes/mailbox-settings");
 const aiRoutes = require("./routes/ai");
+const agentRoutes = require("./routes/agents");
+const agentApiRoutes = require("./routes/agent-api");
 const LLMSettingsService = require("./services/LLMSettingsService");
 const ClassificationWorker = require("./services/ClassificationWorker");
+const AgentMailWatcher = require("./services/AgentMailWatcher");
+const WebhookDispatcher = require("./services/WebhookDispatcher");
 
 // Initialize Express app
 const app = express();
@@ -111,6 +115,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/emails", emailRoutes);
 app.use("/api/campaigns", campaignRoutes);
 app.use("/api/automation", automationRoutes);
+app.use("/api/admin/agents", agentRoutes);
+app.use("/api/agent", agentApiRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/admin", provisioningRoutes);
 app.use("/api/mailbox", mailboxSettingsRoutes);
@@ -154,6 +160,64 @@ app.get("/api/docs", (req, res) => {
                 "POST /api/automation/rules": "Create automation rule",
                 "POST /api/automation/follow-ups": "Schedule follow-up",
                 "GET /api/automation/stats": "Get automation statistics",
+            },
+            agentAdmin: {
+                "GET /api/admin/agents": "List agents the admin can manage",
+                "POST /api/admin/agents":
+                    "Create an agent; returns its API key and signing secret once",
+                "GET /api/admin/agents/:id": "Get an agent",
+                "PUT /api/admin/agents/:id": "Update an agent",
+                "DELETE /api/admin/agents/:id": "Delete an agent",
+                "POST /api/admin/agents/:id/rotate-key": "Issue a new API key",
+                "POST /api/admin/agents/:id/rotate-secret":
+                    "Issue a new webhook signing secret",
+                "POST /api/admin/agents/:id/test": "Send a signed ping",
+                "GET /api/admin/agents/:id/deliveries":
+                    "Recent webhook deliveries",
+                "POST /api/admin/agents/:id/deliveries/:deliveryId/redeliver":
+                    "Queue a delivery again",
+            },
+            agent: {
+                "GET /api/agent/me": "The calling agent and its scope",
+                "GET /api/agent/mailboxes": "Mailboxes the agent can reach",
+                "GET /api/agent/mailboxes/:mailbox/folders":
+                    "List folders (read)",
+                "GET /api/agent/mailboxes/:mailbox/emails":
+                    "List emails (read)",
+                "POST /api/agent/mailboxes/:mailbox/search":
+                    "Search emails (read)",
+                "GET /api/agent/mailboxes/:mailbox/emails/:uid":
+                    "Get an email (read)",
+                "GET /api/agent/mailboxes/:mailbox/emails/:uid/attachments/:index":
+                    "Download an attachment (read)",
+                "POST /api/agent/mailboxes/:mailbox/send":
+                    "Send an email (send)",
+                "POST /api/agent/mailboxes/:mailbox/emails/:uid/reply":
+                    "Reply in thread (send)",
+                "PATCH /api/agent/mailboxes/:mailbox/emails/:uid/mark":
+                    "Set read/unread/flagged (modify)",
+                "PATCH /api/agent/mailboxes/:mailbox/emails/:uid/move":
+                    "Move to another folder (modify)",
+                "PATCH /api/agent/mailboxes/:mailbox/emails/:uid/spam":
+                    "Report as spam or not spam (modify)",
+                "DELETE /api/agent/mailboxes/:mailbox/emails/:uid":
+                    "Move to Trash, or expunge with ?permanent=true (modify)",
+                "GET /api/agent/mailboxes/:mailbox/emails/:uid/source":
+                    "Raw RFC822 source (read)",
+                "POST /api/agent/mailboxes/:mailbox/drafts":
+                    "Save a draft (modify)",
+                "POST /api/agent/mailboxes/:mailbox/folders":
+                    "Create a folder (modify)",
+                "PUT /api/agent/mailboxes/:mailbox/folders/:name":
+                    "Rename a folder (modify)",
+                "DELETE /api/agent/mailboxes/:mailbox/folders/:name":
+                    "Delete a folder (modify)",
+                "/api/agent/mailboxes/:mailbox/settings/{filters,vacation,forwarding,identities}":
+                    "Mailbox settings, same shape as /api/mailbox (settings)",
+                "/api/agent/admin/{domains,mailboxes,aliases}":
+                    "Directory provisioning, same shape as /api/admin (provision)",
+                "/api/agent/admin/domains/:domain/admins":
+                    "Grant or revoke domain admins (admins)",
             },
         },
     });
@@ -505,6 +569,66 @@ const initializeDatabase = async () => {
       );
     `);
 
+        /**
+         * External agents an administrator has granted access to a set of
+         * mailboxes. The API key is stored only as a SHA-256 digest; the
+         * webhook signing secret is encrypted (config/secrets.js) because it
+         * has to be recovered to sign each delivery.
+         */
+        await query(`
+      CREATE TABLE IF NOT EXISTS agents (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        webhook_url TEXT,
+        signing_secret_encrypted TEXT,
+        api_key_hash VARCHAR(64) NOT NULL UNIQUE,
+        api_key_prefix VARCHAR(32) NOT NULL,
+        scope_all BOOLEAN NOT NULL DEFAULT FALSE,
+        domains JSONB NOT NULL DEFAULT '[]',
+        mailboxes JSONB NOT NULL DEFAULT '[]',
+        events JSONB NOT NULL DEFAULT '[]',
+        permissions JSONB NOT NULL DEFAULT '[]',
+        active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_by VARCHAR(255) NOT NULL,
+        last_used_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+        // Highest UID already turned into events, per mailbox and folder. One
+        // row serves every agent, so a mailbox is polled once per cycle.
+        await query(`
+      CREATE TABLE IF NOT EXISTS agent_mail_cursors (
+        mailbox VARCHAR(255) NOT NULL,
+        folder VARCHAR(255) NOT NULL,
+        uidvalidity BIGINT NOT NULL DEFAULT 0,
+        last_uid BIGINT NOT NULL DEFAULT 0,
+        updated_at TIMESTAMP DEFAULT NOW(),
+        PRIMARY KEY (mailbox, folder)
+      );
+    `);
+
+        await query(`
+      CREATE TABLE IF NOT EXISTS agent_deliveries (
+        id SERIAL PRIMARY KEY,
+        agent_id INTEGER NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+        event VARCHAR(64) NOT NULL,
+        mailbox VARCHAR(255) NOT NULL DEFAULT '',
+        message_key VARCHAR(512) NOT NULL,
+        payload JSONB NOT NULL,
+        status VARCHAR(16) NOT NULL DEFAULT 'pending',
+        attempts INTEGER NOT NULL DEFAULT 0,
+        next_attempt_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        last_status_code INTEGER,
+        last_error TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        delivered_at TIMESTAMP,
+        UNIQUE (agent_id, event, mailbox, message_key)
+      );
+    `);
+
         // Create indexes for better performance
         await query(`
       CREATE INDEX IF NOT EXISTS idx_classifications_locator
@@ -550,6 +674,16 @@ const initializeDatabase = async () => {
         await query(`
       CREATE INDEX IF NOT EXISTS idx_sent_emails_from_date 
       ON sent_emails(from_email, sent_at);
+    `);
+
+        await query(`
+      CREATE INDEX IF NOT EXISTS idx_agent_deliveries_due
+      ON agent_deliveries(status, next_attempt_at);
+    `);
+
+        await query(`
+      CREATE INDEX IF NOT EXISTS idx_agent_deliveries_agent
+      ON agent_deliveries(agent_id, created_at DESC);
     `);
 
         console.log("Database tables initialized successfully");
@@ -600,6 +734,10 @@ const startServer = async () => {
         if ((await LLMSettingsService.shared().get()).classify_enabled) {
             ClassificationWorker.shared().start();
         }
+
+        // Both are cheap while no agent is configured: one query per cycle.
+        AgentMailWatcher.shared().start();
+        WebhookDispatcher.shared().start();
 
         const server = app.listen(PORT, () => {
             console.log(

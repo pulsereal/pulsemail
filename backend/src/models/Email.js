@@ -146,19 +146,34 @@ class Email {
         return this.transporter;
     }
 
-    async sendEmail(from, to, subject, content, attachments = []) {
+    /**
+     * `options` carries cc, bcc, a plain-text alternative and the threading
+     * headers a reply needs (inReplyTo, references).
+     */
+    async sendEmail(from, to, subject, content, attachments = [], options = {}) {
         try {
-            const recipients = Array.isArray(to) ? to.join(",") : to;
+            const { cc, bcc, text, inReplyTo, references } = options;
+            const join = (value) =>
+                Array.isArray(value) ? value.join(",") : value || "";
+            const recipients = join(to);
+            const envelopeTo = [recipients, join(cc), join(bcc)]
+                .filter(Boolean)
+                .join(",");
 
             const result = await this.getTransporter().sendMail({
                 from,
                 to: recipients,
+                cc: cc || undefined,
+                bcc: bcc || undefined,
                 subject,
                 html: content,
+                text,
+                inReplyTo,
+                references,
                 attachments,
                 // Keep the envelope sender aligned with the acting mailbox so
                 // Postfix sender restrictions and SPF stay correct.
-                envelope: { from, to: recipients },
+                envelope: { from, to: envelopeTo },
             });
 
             await this.logSentEmail(
@@ -262,7 +277,25 @@ class Email {
                 total: box.messages?.total ?? 0,
                 unseen: box.messages?.unseen ?? 0,
                 uidvalidity: box.uidvalidity ?? 0,
+                uidnext: box.uidnext ?? 0,
             };
+        });
+    }
+
+    /**
+     * UIDs above `afterUid`, ascending. `UID n:*` always matches the highest
+     * message even when its UID is below n, so the result is filtered again.
+     */
+    async getUidsSince(mailbox, folder, afterUid) {
+        return imapPool.withMailbox(mailbox, async (client) => {
+            await client.openBox(folder, true);
+            const uids = await client.search([
+                ["UID", `${Number(afterUid) + 1}:*`],
+            ]);
+            return uids
+                .map(Number)
+                .filter((uid) => uid > afterUid)
+                .sort((a, b) => a - b);
         });
     }
 
@@ -338,11 +371,14 @@ class Email {
                 mailbox,
                 folder,
                 from: parsed.from,
+                replyTo: parsed.replyTo,
                 to: parsed.to,
                 cc: parsed.cc,
                 subject: parsed.subject || "(no subject)",
                 date: parsed.date ? parsed.date.toISOString() : null,
                 messageId: parsed.messageId,
+                inReplyTo: parsed.inReplyTo,
+                references: parsed.references,
                 html: parsed.html || null,
                 text: parsed.text || "",
                 flags: attrs.flags || [],

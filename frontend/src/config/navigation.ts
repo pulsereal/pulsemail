@@ -8,6 +8,7 @@ import {
     BoltIcon,
     UsersIcon,
     SparklesIcon,
+    CpuChipIcon,
     Cog6ToothIcon,
 } from "@heroicons/react/24/outline";
 
@@ -80,6 +81,13 @@ export const NAV_ITEMS: NavItem[] = [
         name: "AI Sorting",
         href: "/ai",
         icon: SparklesIcon,
+        section: "admin",
+        requiresAdmin: true,
+    },
+    {
+        name: "Agents",
+        href: "/agents",
+        icon: CpuChipIcon,
         section: "admin",
         requiresAdmin: true,
     },

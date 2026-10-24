@@ -26,6 +26,7 @@ const UsersPage = lazy(() => import("./pages/UsersPage"));
 const DomainsPage = lazy(() => import("./pages/DomainsPage"));
 const AliasesPage = lazy(() => import("./pages/AliasesPage"));
 const AISettingsPage = lazy(() => import("./pages/AISettingsPage"));
+const AgentsPage = lazy(() => import("./pages/AgentsPage"));
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -110,6 +111,10 @@ function App() {
                                         <Route
                                             path="ai"
                                             element={<AISettingsPage />}
+                                        />
+                                        <Route
+                                            path="agents"
+                                            element={<AgentsPage />}
                                         />
                                     </Route>
                                 </Route>

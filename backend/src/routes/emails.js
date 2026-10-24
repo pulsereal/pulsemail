@@ -8,6 +8,8 @@ const {
 const LLMService = require("../services/LLMService");
 const SpamService = require("../services/SpamService");
 const AutomationService = require("../services/AutomationService");
+const AgentService = require("../services/AgentService");
+const { sentEmailPayload } = require("../services/AgentService");
 const LLMSettingsService = require("../services/LLMSettingsService");
 const {
     ImportanceService,
@@ -40,6 +42,7 @@ const emailService = mailService;
 const llmService = new LLMService();
 const spamService = new SpamService();
 const automationService = AutomationService.shared();
+const agentService = AgentService.shared();
 const importanceService = ImportanceService.shared();
 const llmSettings = LLMSettingsService.shared();
 
@@ -305,6 +308,25 @@ router.post(
             const successCount = results.filter(
                 (r) => r.status === "sent"
             ).length;
+
+            const firstSent = results.find((r) => r.status === "sent");
+            if (firstSent) {
+                await agentService.publish(
+                    "email.sent",
+                    email,
+                    sentEmailPayload({
+                        mailbox: email,
+                        to: recipients,
+                        cc: ccRecipients,
+                        bcc: bccRecipients,
+                        subject,
+                        html: content,
+                        messageId: firstSent.messageId,
+                        via: "webmail",
+                    }),
+                    firstSent.messageId
+                );
+            }
 
             res.json({
                 success: successCount > 0,
@@ -885,6 +907,20 @@ router.post(
                 subject,
                 content,
                 attachments
+            );
+
+            await agentService.publish(
+                "email.sent",
+                email,
+                sentEmailPayload({
+                    mailbox: email,
+                    to,
+                    subject,
+                    html: content,
+                    messageId: result.messageId,
+                    via: "external",
+                }),
+                result.messageId
             );
 
             res.json({

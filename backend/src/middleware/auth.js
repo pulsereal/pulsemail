@@ -275,15 +275,24 @@ const intFromEnv = (name, fallback) => {
  * NAT or corporate gateway, and a webmail client is chatty enough that a single
  * active user would exhaust a per-IP budget shared with their colleagues.
  */
-const createRateLimit = (windowMs, max, message) =>
+const createRateLimit = (
+    windowMs,
+    max,
+    message,
+    keyGenerator = (req) => req.user?.email || req.ip
+) =>
     rateLimit({
         windowMs,
         max,
         message: { error: message },
         standardHeaders: true,
         legacyHeaders: false,
-        keyGenerator: (req) => req.user?.email || req.ip,
+        keyGenerator,
     });
+
+// Agent calls are budgeted per agent, so one runaway integration cannot spend
+// the allowance of another sharing the same egress address.
+const agentKey = (req) => (req.agent ? `agent:${req.agent.id}` : req.ip);
 
 const authRateLimit = createRateLimit(
     intFromEnv("AUTH_RATE_LIMIT_WINDOW_MS", 15 * 60 * 1000),
@@ -306,6 +315,20 @@ const apiRateLimit = createRateLimit(
     intFromEnv("RATE_LIMIT_WINDOW_MS", 15 * 60 * 1000),
     intFromEnv("RATE_LIMIT_MAX_REQUESTS", 3000),
     "Too many API requests, please try again later"
+);
+
+const agentApiRateLimit = createRateLimit(
+    intFromEnv("RATE_LIMIT_WINDOW_MS", 15 * 60 * 1000),
+    intFromEnv("RATE_LIMIT_MAX_REQUESTS", 3000),
+    "Too many API requests, please try again later",
+    agentKey
+);
+
+const agentSendRateLimit = createRateLimit(
+    intFromEnv("SEND_RATE_LIMIT_WINDOW_MS", 60 * 1000),
+    intFromEnv("SEND_RATE_LIMIT_MAX", 20),
+    "Too many emails sent, please try again later",
+    agentKey
 );
 
 // Input validation middleware
@@ -452,6 +475,8 @@ module.exports = {
     authRateLimit,
     emailRateLimit,
     apiRateLimit,
+    agentApiRateLimit,
+    agentSendRateLimit,
     validateEmail,
     validatePassword,
     errorHandler,

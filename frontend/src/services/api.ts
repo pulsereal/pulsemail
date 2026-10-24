@@ -1,5 +1,6 @@
 import axios from "axios";
 import toast from "react-hot-toast";
+import type { AgentDeliveryStatus, AgentInput } from "../types";
 
 /**
  * The auth store owns the token and the mailbox the user is acting as, but it
@@ -344,6 +345,37 @@ export const aiAPI = {
 
     runClassification: (mailboxes?: string[]) =>
         apiClient.post("/admin/ai/classify/run", { mailboxes }),
+};
+
+/** External agents: webhook delivery plus the scoped agent API key. */
+export const agentsAPI = {
+    list: () => apiClient.get("/admin/agents"),
+
+    get: (id: number) => apiClient.get(`/admin/agents/${id}`),
+
+    create: (data: AgentInput) => apiClient.post("/admin/agents", data),
+
+    update: (id: number, data: Partial<AgentInput>) =>
+        apiClient.put(`/admin/agents/${id}`, data),
+
+    remove: (id: number) => apiClient.delete(`/admin/agents/${id}`),
+
+    rotateKey: (id: number) => apiClient.post(`/admin/agents/${id}/rotate-key`),
+
+    rotateSecret: (id: number) =>
+        apiClient.post(`/admin/agents/${id}/rotate-secret`),
+
+    test: (id: number) => apiClient.post(`/admin/agents/${id}/test`),
+
+    getDeliveries: (
+        id: number,
+        params?: { limit?: number; status?: AgentDeliveryStatus }
+    ) => apiClient.get(`/admin/agents/${id}/deliveries`, { params }),
+
+    redeliver: (id: number, deliveryId: number) =>
+        apiClient.post(
+            `/admin/agents/${id}/deliveries/${deliveryId}/redeliver`
+        ),
 };
 
 export const emailAPI = {

@@ -574,6 +574,87 @@ export interface ClassificationStats {
     last_run: string | null;
 }
 
+// Agent Types
+export type AgentEvent = "email.received" | "email.sent";
+export type AgentPermission =
+    "read" | "send" | "modify" | "settings" | "provision" | "admins";
+
+export interface AgentScope {
+    scopeAll: boolean;
+    domains: string[];
+    mailboxes: string[];
+}
+
+export interface Agent extends AgentScope {
+    id: number;
+    name: string;
+    description: string;
+    webhookUrl: string | null;
+    apiKeyPrefix: string;
+    signingSecretHint: string | null;
+    events: AgentEvent[];
+    permissions: AgentPermission[];
+    active: boolean;
+    createdBy: string;
+    lastUsedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+    lastDelivery?: {
+        status: AgentDeliveryStatus;
+        statusCode: number | null;
+        at: string;
+    } | null;
+    pendingDeliveries?: number;
+    failedDeliveries?: number;
+}
+
+export interface AgentInput extends Partial<AgentScope> {
+    name: string;
+    description?: string;
+    webhookUrl?: string | null;
+    events?: AgentEvent[];
+    permissions?: AgentPermission[];
+    active?: boolean;
+}
+
+/** Only present in the response that created or rotated them. */
+export interface AgentSecrets {
+    apiKey?: string;
+    signingSecret?: string;
+}
+
+export type AgentDeliveryStatus = "pending" | "delivered" | "failed";
+
+export interface AgentDelivery {
+    id: number;
+    event: AgentEvent;
+    mailbox: string;
+    messageKey: string;
+    subject: string | null;
+    status: AgentDeliveryStatus;
+    attempts: number;
+    nextAttemptAt: string;
+    lastStatusCode: number | null;
+    lastError: string | null;
+    createdAt: string;
+    deliveredAt: string | null;
+}
+
+export interface AgentPingResult {
+    ok: boolean;
+    statusCode: number | null;
+    error: string | null;
+    durationMs?: number;
+}
+
+export interface AgentWatcherStatus {
+    scheduled: boolean;
+    running: boolean;
+    intervalMs: number;
+    lastRun: string | null;
+    lastError: string | null;
+}
+
 // Common Types
 export interface User {
     id?: string;
