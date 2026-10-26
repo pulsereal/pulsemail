@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "react-query";
 import toast from "react-hot-toast";
 import { XMarkIcon } from "@heroicons/react/24/outline";
@@ -56,6 +56,16 @@ const AgentFormModal: React.FC<AgentFormModalProps> = ({
     const [permissions, setPermissions] = useState<AgentPermission[]>([]);
     const [active, setActive] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const errorRef = useRef<HTMLParagraphElement>(null);
+
+    // Events only mean something with somewhere to deliver them, so they stay
+    // off until a URL is entered, keeping API-only agents a valid default.
+    const hasWebhook = webhookUrl.trim().length > 0;
+
+    // The form scrolls, and the submit button sits below it.
+    useEffect(() => {
+        if (error) errorRef.current?.scrollIntoView({ block: "nearest" });
+    }, [error]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -114,7 +124,7 @@ const AgentFormModal: React.FC<AgentFormModalProps> = ({
         scopeAll,
         domains: scopeAll ? [] : domains,
         mailboxes: scopeAll ? [] : mailboxes,
-        events,
+        events: hasWebhook ? events : [],
         permissions,
         active,
     });
@@ -159,10 +169,6 @@ const AgentFormModal: React.FC<AgentFormModalProps> = ({
             setError("Choose at least one domain or mailbox");
             return;
         }
-        if (events.length > 0 && !webhookUrl.trim()) {
-            setError("A webhook URL is required to receive events");
-            return;
-        }
         const directory = AGENT_PERMISSIONS.filter(
             (entry) => entry.directory && permissions.includes(entry.id)
         );
@@ -204,7 +210,11 @@ const AgentFormModal: React.FC<AgentFormModalProps> = ({
         >
             <form id="agent-form" onSubmit={submit} className="space-y-6">
                 {error && (
-                    <p className="rounded-lg bg-danger-50 px-3 py-2 text-sm text-danger-700">
+                    <p
+                        ref={errorRef}
+                        role="alert"
+                        className="rounded-lg bg-danger-50 px-3 py-2 text-sm text-danger-700"
+                    >
                         {error}
                     </p>
                 )}
@@ -350,12 +360,20 @@ const AgentFormModal: React.FC<AgentFormModalProps> = ({
                     <legend className="text-sm font-semibold text-content">
                         Webhook events
                     </legend>
+                    {!hasWebhook && (
+                        <p className="text-sm text-content-subtle">
+                            Add a webhook URL above to choose events. Without
+                            one, the agent works through its API key only.
+                        </p>
+                    )}
                     {AGENT_EVENTS.map((entry) => (
                         <Checkbox
                             key={entry.id}
                             label={entry.label}
                             description={entry.description}
-                            checked={events.includes(entry.id)}
+                            disabled={!hasWebhook}
+                            className={hasWebhook ? undefined : "opacity-50"}
+                            checked={hasWebhook && events.includes(entry.id)}
                             onChange={(event) =>
                                 setEvents((current) =>
                                     toggle(
