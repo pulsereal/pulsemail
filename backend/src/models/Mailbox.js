@@ -15,6 +15,59 @@ const {
     isValidEmail,
 } = require("../config/iredmail");
 
+const PROFILE_COLUMNS = {
+    first_name: "firstName",
+    last_name: "lastName",
+    mobile: "mobile",
+    telephone: "telephone",
+    recovery_email: "recoveryEmail",
+};
+
+/**
+ * Columns iRedMail introduced in 1.7.3. Older releases have none of them, and
+ * the schema is iRedMail's to change, so each is written only when it exists.
+ */
+const OPTIONAL_COLUMNS = {
+    mailbox: Object.keys(PROFILE_COLUMNS),
+    deleted_mailboxes: ["bytes", "messages"],
+};
+
+let optionalColumns = null;
+
+/** Resolves to the `table.column` names from OPTIONAL_COLUMNS that exist. */
+const presentOptionalColumns = () => {
+    optionalColumns ??= query(
+        `SELECT c.relname AS table_name, a.attname AS column_name
+           FROM pg_attribute a
+           JOIN pg_class c ON c.oid = a.attrelid
+          WHERE a.attrelid IN (SELECT to_regclass(name) FROM unnest($1::text[]) AS name)
+            AND a.attname = ANY ($2::text[])
+            AND a.attnum > 0
+            AND NOT a.attisdropped`,
+        [Object.keys(OPTIONAL_COLUMNS), Object.values(OPTIONAL_COLUMNS).flat()]
+    ).then(
+        (result) =>
+            new Set(
+                result.rows.map((row) => `${row.table_name}.${row.column_name}`)
+            ),
+        (error) => {
+            optionalColumns = null;
+            throw error;
+        }
+    );
+    return optionalColumns;
+};
+
+/** `name` is the only display-name column every iRedMail release has. */
+const displayName = ({ name, firstName, lastName }) =>
+    String(name ?? "").trim() ||
+    [firstName, lastName]
+        .map((part) => String(part ?? "").trim())
+        .filter(Boolean)
+        .join(" ");
+
+const placeholders = (values) => values.map((_, i) => `$${i + 1}`).join(", ");
+
 /**
  * Provisioning against iRedMail's `mailbox` table plus the `forwardings` rows
  * Postfix needs to route to it.
@@ -202,41 +255,41 @@ class Mailbox {
         }
 
         const { base, node } = splitStorage();
-        const maildir = generateMaildir(email);
-        const password = await hashPassword(input.password, input.scheme);
+        const present = await presentOptionalColumns();
+
+        const row = {
+            username: email,
+            password: await hashPassword(input.password, input.scheme),
+            name: displayName(input),
+            language: input.language || "en_US",
+            storagebasedirectory: base,
+            storagenode: node,
+            maildir: generateMaildir(email),
+            quota: quotaMb,
+            domain,
+            employeeid: input.employeeId || "",
+            department: input.department || "",
+            isadmin: 0,
+            isglobaladmin: input.isGlobalAdmin ? 1 : 0,
+            active: input.active === false ? 0 : 1,
+        };
+        for (const [column, field] of Object.entries(PROFILE_COLUMNS)) {
+            if (present.has(`mailbox.${column}`)) {
+                row[column] = input[field] || "";
+            }
+        }
+
         const client = await getClient();
 
         try {
             await client.query("BEGIN");
 
+            const columns = Object.keys(row);
             await client.query(
                 `INSERT INTO mailbox
-                    (username, password, name, language, storagebasedirectory,
-                     storagenode, maildir, quota, domain, first_name, last_name,
-                     employeeid, department, mobile, telephone, recovery_email,
-                     isadmin, isglobaladmin, passwordlastchange, created, active)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-                         $14, $15, $16, 0, $17, NOW(), NOW(), $18)`,
-                [
-                    email,
-                    password,
-                    input.name || "",
-                    input.language || "en_US",
-                    base,
-                    node,
-                    maildir,
-                    quotaMb,
-                    domain,
-                    input.firstName || "",
-                    input.lastName || "",
-                    input.employeeId || "",
-                    input.department || "",
-                    input.mobile || "",
-                    input.telephone || "",
-                    input.recoveryEmail || "",
-                    input.isGlobalAdmin ? 1 : 0,
-                    input.active === false ? 0 : 1,
-                ]
+                    (${columns.join(", ")}, passwordlastchange, created)
+                 VALUES (${placeholders(columns)}, NOW(), NOW())`,
+                Object.values(row)
             );
 
             // Postfix resolves the mailbox through virtual_alias_maps
@@ -284,15 +337,15 @@ class Mailbox {
             assignments.push(`${quoteColumn(column)} = $${params.length}`);
         };
 
-        set("name", input.name);
+        const present = await presentOptionalColumns();
+
+        set("name", input.name === undefined ? undefined : displayName(input));
         set("language", input.language);
-        set("first_name", input.firstName);
-        set("last_name", input.lastName);
         set("employeeid", input.employeeId);
         set("department", input.department);
-        set("mobile", input.mobile);
-        set("telephone", input.telephone);
-        set("recovery_email", input.recoveryEmail);
+        for (const [column, field] of Object.entries(PROFILE_COLUMNS)) {
+            if (present.has(`mailbox.${column}`)) set(column, input[field]);
+        }
         set(
             "active",
             input.active === undefined ? undefined : input.active ? 1 : 0
@@ -407,24 +460,30 @@ class Mailbox {
         const deleteDate = new Date();
         deleteDate.setDate(deleteDate.getDate() + keepMaildirDays);
 
+        const present = await presentOptionalColumns();
+        const tombstone = {
+            username: email,
+            domain: row.domain,
+            maildir: fullMaildir,
+            admin: deletedBy || "",
+            delete_date: deleteDate.toISOString().slice(0, 10),
+        };
+        for (const column of OPTIONAL_COLUMNS.deleted_mailboxes) {
+            if (present.has(`deleted_mailboxes.${column}`)) {
+                tombstone[column] = parseInt(row[column] || 0, 10);
+            }
+        }
+
         const client = await getClient();
 
         try {
             await client.query("BEGIN");
 
+            const columns = Object.keys(tombstone);
             await client.query(
-                `INSERT INTO deleted_mailboxes
-                    (username, domain, maildir, bytes, messages, admin, delete_date)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-                [
-                    email,
-                    row.domain,
-                    fullMaildir,
-                    parseInt(row.bytes || 0, 10),
-                    parseInt(row.messages || 0, 10),
-                    deletedBy || "",
-                    deleteDate.toISOString().slice(0, 10),
-                ]
+                `INSERT INTO deleted_mailboxes (${columns.join(", ")})
+                 VALUES (${placeholders(columns)})`,
+                Object.values(tombstone)
             );
 
             await client.query(
