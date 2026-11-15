@@ -1,10 +1,13 @@
 /**
  * The subset of iRedMail's `vmail` schema this application reads or writes.
  *
- * Transcribed from samples/iredmail/iredmail.pgsql so that development runs
- * against the same column names, types and defaults as a real deployment. Only
- * used to bootstrap the in-process Postgres used by mock mode — against a live
- * iRedMail these tables already exist and are never created by us.
+ * Transcribed from samples/iredmail/iredmail.pgsql as of iRedMail 1.7.1, the
+ * oldest release we run against, so that development runs against the same
+ * column names, types and defaults as a real deployment. Columns added in later
+ * releases stay out: scripts/check-stock-schema.js fails if this drifts from
+ * the stock 1.7.1 schema. Only used to bootstrap the in-process Postgres used
+ * by mock mode — against a live iRedMail these tables already exist and are
+ * never created by us.
  */
 module.exports = `
 CREATE TABLE IF NOT EXISTS domain (
@@ -50,12 +53,6 @@ CREATE TABLE IF NOT EXISTS mailbox (
     password VARCHAR(255) NOT NULL DEFAULT '',
     name VARCHAR(255) NOT NULL DEFAULT '',
     language VARCHAR(5) NOT NULL DEFAULT '',
-    first_name VARCHAR(255) NOT NULL DEFAULT '',
-    last_name VARCHAR(255) NOT NULL DEFAULT '',
-    mobile VARCHAR(255) NOT NULL DEFAULT '',
-    telephone VARCHAR(255) NOT NULL DEFAULT '',
-    recovery_email VARCHAR(255) NOT NULL DEFAULT '',
-    birthday DATE NOT NULL DEFAULT '0001-01-01',
     mailboxformat VARCHAR(50) NOT NULL DEFAULT 'maildir',
     mailboxfolder VARCHAR(50) NOT NULL DEFAULT 'Maildir',
     storagebasedirectory VARCHAR(255) NOT NULL DEFAULT '',
@@ -66,7 +63,7 @@ CREATE TABLE IF NOT EXISTS mailbox (
     transport VARCHAR(255) NOT NULL DEFAULT '',
     department VARCHAR(255) NOT NULL DEFAULT '',
     rank VARCHAR(255) NOT NULL DEFAULT 'normal',
-    employeeid VARCHAR(255) NOT NULL DEFAULT '',
+    employeeid VARCHAR(255) DEFAULT '',
     isadmin INT2 NOT NULL DEFAULT 0,
     isglobaladmin INT2 NOT NULL DEFAULT 0,
     enablesmtp INT2 NOT NULL DEFAULT 1,
@@ -215,8 +212,6 @@ CREATE TABLE IF NOT EXISTS deleted_mailboxes (
     username VARCHAR(255) NOT NULL DEFAULT '',
     domain VARCHAR(255) NOT NULL DEFAULT '',
     maildir VARCHAR(255) NOT NULL DEFAULT '',
-    bytes INT8 NOT NULL DEFAULT 0,
-    messages INT8 NOT NULL DEFAULT 0,
     admin VARCHAR(255) NOT NULL DEFAULT '',
     delete_date DATE DEFAULT NULL
 );
